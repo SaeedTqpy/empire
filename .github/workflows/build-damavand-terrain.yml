@@ -53,12 +53,20 @@ jobs:
       - name: Install project dependencies
         run: npm ci
 
+      - name: Prefetch source DEM tiles
+        run: |
+          python scripts/terrain/prefetch_tiles.py \
+            --config scripts/terrain/damavand.json \
+            --cache-dir .terrain-cache \
+            --workers 4
+
       - name: Build raw Damavand terrain
         run: |
           python scripts/terrain/build_peak_terrain.py \
             --config scripts/terrain/damavand.json \
             --output public/models/damavand.raw.glb \
-            --manifest public/models/damavand.terrain.json
+            --manifest public/models/damavand.terrain.json \
+            --cache-dir .terrain-cache
 
       - name: Validate raw terrain geometry
         run: |
