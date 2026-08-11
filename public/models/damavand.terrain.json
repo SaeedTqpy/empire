@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "peak_id": "damavand",
+  "source": {
+    "type": "skadi-hgt",
+    "url_template": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/{lat_band}/{tile}.hgt.gz",
+    "attribution": "SRTM terrain data courtesy of the U.S. Geological Survey; tiles distributed through the AWS Open Data Terrain Tiles dataset."
+  },
+  "source_tiles": [
+    {
+      "tile": "N35E051",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N35/N35E051.hgt.gz",
+      "samples_per_side": 3601
+    },
+    {
+      "tile": "N35E052",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N35/N35E052.hgt.gz",
+      "samples_per_side": 3601
+    },
+    {
+      "tile": "N36E051",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N36/N36E051.hgt.gz",
+      "samples_per_side": 3601
+    },
+    {
+      "tile": "N36E052",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N36/N36E052.hgt.gz",
+      "samples_per_side": 3601
+    }
+  ],
+  "center": {
+    "lat": 35.9513,
+    "lon": 52.1097
+  },
+  "bbox_wgs84": {
+    "west": 51.94305968192662,
+    "south": 35.81640194544132,
+    "east": 52.27634031807337,
+    "north": 36.086198054558686
+  },
+  "extent_km": 30.0,
+  "grid_size": 257,
+  "terrain_triangles": 131072,
+  "skirt_triangles": 2048,
+  "elevation_m": {
+    "min_sampled": 887.22,
+    "max_sampled": 5592.65,
+    "base": 767
+  },
+  "coordinate_contract": {
+    "units": "meters",
+    "x": "east",
+    "y": "elevation_above_base",
+    "z": "north",
+    "uv": "u west-to-east; v south-to-north"
+  },
+  "model": {
+    "path": "/models/damavand.glb",
+    "satellite_texture": "phase-3",
+    "vertical_exaggeration": 1.0
+  }
+}
