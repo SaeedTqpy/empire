@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { CompassIcon, EmpiresIcon, NotesIcon, MenuIcon } from "./icons";
+import { CompassIcon, LibraryIcon, NotesIcon, MenuIcon } from "./icons";
 
 interface HeaderProps {
   onMenuOpen: () => void;
@@ -9,7 +9,7 @@ interface HeaderProps {
 
 const NAV = [
   { id: "explore", label: "Explore", icon: CompassIcon },
-  { id: "peaks", label: "Peaks", icon: EmpiresIcon },
+  { id: "peaks", label: "Peaks", icon: LibraryIcon },
   { id: "routes", label: "Routes", icon: NotesIcon },
 ];
 
