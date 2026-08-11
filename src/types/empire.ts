@@ -97,6 +97,8 @@ export interface Empire {
   subtitle: string;
   description: string;
   modelPath: string;
+  /** Optional public credit for imagery baked into the model. */
+  imageryAttribution?: string;
   /** per-empire warm accent used for subtle scene tinting */
   tint: string;
   camera: CameraPreset;
