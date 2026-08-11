@@ -6,7 +6,7 @@
     "lon": 52.1097
   },
   "extent_km": 30.0,
-  "grid_size": 257,
+  "grid_size": 513,
   "base_depth_m": 120.0,
   "source": {
     "type": "skadi-hgt",
