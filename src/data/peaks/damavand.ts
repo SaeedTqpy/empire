@@ -4,8 +4,8 @@ import type { Peak } from "@/types/peak";
  * Phase 1 Damavand data.
  *
  * The real terrain GLB and satellite imagery arrive in phases 2–3. Until then
- * the original Persian model is intentionally used as a rendering placeholder
- * so we can validate the peak-domain wiring without touching ViewerEngine.
+ * the original Persian GLB is intentionally used as a rendering placeholder
+ * so we can validate peak-domain wiring without destabilizing ViewerEngine.
  */
 export const damavand: Peak = {
   id: "damavand",
@@ -46,11 +46,10 @@ export const damavand: Peak = {
   // Real geo-aware hotspots are added after the DEM terrain is in place.
   hotspots: [],
 
-  // Temporary assets prevent broken images during the foundation migration.
-  // These are replaced by Damavand satellite/hero assets in phase 3.
+  // Neutral phase-1 artwork. Replaced by satellite/hero assets in phase 3.
   media: {
-    thumbnail: "/img/persian/thumbnail.webp",
-    hero: "/img/persian/hero.webp",
+    thumbnail: "/img/peaks/damavand-placeholder.svg",
+    hero: "/img/peaks/damavand-placeholder.svg",
   },
 
   keywords: ["damavand", "دماوند", "iran", "alborz", "mountain", "volcano", "peak"],
