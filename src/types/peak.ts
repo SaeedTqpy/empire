@@ -33,10 +33,9 @@ export interface PeakFact {
 export type PeakHotspotCategory = "summit" | "shelter" | "landmark" | "hazard" | "water" | "route";
 
 /**
- * Phase 1 hotspot coordinates are normalized model-space anchors so the
- * existing Three.js engine can keep working while the real DEM model is being
- * built. In the terrain phase this becomes a geo-aware lat/lon/elevation
- * contract and is projected onto the mountain mesh.
+ * Hotspot anchors remain normalized model-space coordinates until the route
+ * and geo-projection phase. The terrain manifest added in Phase 2 provides the
+ * geographic transform needed to move these to lat/lon/elevation later.
  */
 export interface PeakHotspot {
   id: string;
@@ -53,6 +52,18 @@ export interface PeakMedia {
   hero: string;
 }
 
+export interface PeakTerrain {
+  /** Build manifest containing bbox, source tiles and coordinate contract. */
+  manifestPath: string;
+  /** Square source area represented by the terrain mesh. */
+  extentKm: number;
+  /** Samples on each axis before mesh compression. */
+  gridSize: number;
+  /** 1.0 means elevations are rendered in their real physical proportion. */
+  verticalExaggeration: number;
+  sourceLabel: string;
+}
+
 export interface Peak {
   id: string;
   name: string;
@@ -67,8 +78,9 @@ export interface Peak {
   country: string;
   coordinates: PeakCoordinates;
 
-  /** GLB used by the Three.js viewer. Phase 1 uses a placeholder model. */
+  /** GLB used by the Three.js viewer. */
   modelPath: string;
+  terrain: PeakTerrain;
   tint: string;
   camera: PeakCameraPreset;
 
