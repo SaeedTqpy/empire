@@ -1,0 +1,162 @@
+name: Build Damavand Imagery
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - iran-peaks
+    paths:
+      - "scripts/imagery/**"
+      - ".github/workflows/build-damavand-imagery.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: damavand-imagery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-imagery:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: iran-peaks
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            scripts/terrain/requirements.txt
+            scripts/imagery/requirements.txt
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Cache source DEM tiles
+        uses: actions/cache@v4
+        with:
+          path: .terrain-cache
+          key: damavand-skadi-${{ runner.os }}-${{ hashFiles('scripts/terrain/damavand.json') }}
+          restore-keys: |
+            damavand-skadi-${{ runner.os }}-
+
+      - name: Install build dependencies
+        run: |
+          pip install -r scripts/terrain/requirements.txt -r scripts/imagery/requirements.txt
+          npm ci
+
+      - name: Apply mountain viewer profile
+        run: python scripts/imagery/apply_phase3_code.py
+
+      - name: Prefetch source DEM tiles
+        run: |
+          python scripts/terrain/prefetch_tiles.py \
+            --config scripts/terrain/damavand.json \
+            --cache-dir .terrain-cache \
+            --workers 4
+
+      - name: Build raw terrain for material authoring
+        run: |
+          mkdir -p .cache/imagery
+          python scripts/terrain/build_peak_terrain.py \
+            --config scripts/terrain/damavand.json \
+            --output .cache/imagery/damavand.raw.glb \
+            --manifest .cache/imagery/damavand.terrain.json \
+            --cache-dir .terrain-cache
+          python scripts/terrain/validate_terrain.py \
+            --model .cache/imagery/damavand.raw.glb \
+            --manifest .cache/imagery/damavand.terrain.json
+
+      - name: Build Sentinel-2 true-colour texture
+        run: |
+          python scripts/imagery/build_sentinel_texture.py \
+            --config scripts/imagery/damavand.json \
+            --texture .cache/imagery/damavand-sentinel.jpg \
+            --preview public/img/peaks/damavand-sentinel.webp \
+            --manifest public/models/damavand.imagery.json
+
+      - name: Author satellite PBR material
+        run: |
+          python scripts/imagery/embed_texture.py \
+            --model .cache/imagery/damavand.raw.glb \
+            --texture .cache/imagery/damavand-sentinel.jpg \
+            --output .cache/imagery/damavand-textured.raw.glb
+
+      - name: Draco-compress textured terrain
+        run: |
+          npx gltf-transform draco \
+            .cache/imagery/damavand-textured.raw.glb \
+            public/models/damavand.glb \
+            --method edgebreaker
+
+      - name: Inspect and size-gate final assets
+        run: |
+          npx gltf-transform inspect public/models/damavand.glb
+          ls -lh public/models/damavand.glb public/models/damavand.imagery.json public/img/peaks/damavand-sentinel.webp
+          test $(stat -c%s public/models/damavand.glb) -gt 500000
+          test $(stat -c%s public/models/damavand.glb) -lt 8000000
+          test $(stat -c%s public/img/peaks/damavand-sentinel.webp) -gt 30000
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m = json.loads(Path('public/models/damavand.imagery.json').read_text())
+          assert m['peak_id'] == 'damavand'
+          assert m['texture']['coverage_percent'] >= 97
+          assert m['texture']['width'] == 2048
+          assert m['attribution'].startswith('Contains modified Copernicus Sentinel data')
+          assert len(m['scenes']) >= 1
+          print('imagery manifest validation OK')
+          PY
+
+      - name: Build application
+        run: npm run build
+
+      - name: Lint application
+        run: npm run lint
+
+      - name: Publish Phase 3 assets and viewer profile
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          tmp_dir="$(mktemp -d)"
+          mkdir -p "$tmp_dir/src/three" "$tmp_dir/src/components" "$tmp_dir/public/models" "$tmp_dir/public/img/peaks"
+          cp src/three/engine.ts "$tmp_dir/src/three/engine.ts"
+          cp src/components/Viewer.tsx "$tmp_dir/src/components/Viewer.tsx"
+          cp public/models/damavand.glb "$tmp_dir/public/models/damavand.glb"
+          cp public/models/damavand.imagery.json "$tmp_dir/public/models/damavand.imagery.json"
+          cp public/img/peaks/damavand-sentinel.webp "$tmp_dir/public/img/peaks/damavand-sentinel.webp"
+
+          git fetch origin iran-peaks
+          git reset --hard origin/iran-peaks
+
+          cp "$tmp_dir/src/three/engine.ts" src/three/engine.ts
+          cp "$tmp_dir/src/components/Viewer.tsx" src/components/Viewer.tsx
+          cp "$tmp_dir/public/models/damavand.glb" public/models/damavand.glb
+          cp "$tmp_dir/public/models/damavand.imagery.json" public/models/damavand.imagery.json
+          cp "$tmp_dir/public/img/peaks/damavand-sentinel.webp" public/img/peaks/damavand-sentinel.webp
+          rm -rf "$tmp_dir"
+
+          git add \
+            src/three/engine.ts \
+            src/components/Viewer.tsx \
+            public/models/damavand.glb \
+            public/models/damavand.imagery.json \
+            public/img/peaks/damavand-sentinel.webp
+
+          if git diff --cached --quiet; then
+            echo "Phase 3 assets are already up to date."
+            exit 0
+          fi
+          git commit -m "build(imagery): publish Damavand Sentinel-2 material"
+          git push origin HEAD:iran-peaks
