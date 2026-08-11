@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Generated terrain build cache
+.cache/
+.venv-terrain/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
