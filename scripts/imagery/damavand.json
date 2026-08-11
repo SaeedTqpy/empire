@@ -1,0 +1,29 @@
+{
+  "id": "damavand",
+  "name": "Mount Damavand",
+  "terrain_manifest": "public/models/damavand.terrain.json",
+  "source": {
+    "provider": "Copernicus Sentinel-2",
+    "catalog": "Earth Search on AWS Open Data",
+    "stac_url": "https://earth-search.aws.element84.com/v1/search",
+    "collection": "sentinel-2-c1-l2a",
+    "datetime": "2026-06-01T00:00:00Z/2026-08-12T23:59:59Z",
+    "max_cloud_cover": 20,
+    "max_candidates": 40,
+    "attribution": "Contains modified Copernicus Sentinel data 2026"
+  },
+  "output": {
+    "width": 2048,
+    "height": 2048,
+    "jpeg_quality": 90,
+    "preview_width": 720,
+    "preview_quality": 86
+  },
+  "color": {
+    "gain": 2.65,
+    "black_point": 0.055,
+    "gamma": 1.04,
+    "saturation": 1.08,
+    "contrast": 1.05
+  }
+}
