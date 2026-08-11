@@ -11,6 +11,10 @@ import numpy as np
 import trimesh
 
 
+MIN_GRID_SIZE = 513
+MIN_TERRAIN_TRIANGLES = (MIN_GRID_SIZE - 1) * (MIN_GRID_SIZE - 1) * 2
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, type=Path)
@@ -23,8 +27,8 @@ def main() -> None:
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     if manifest["peak_id"] != "damavand":
         raise SystemExit("manifest peak_id mismatch")
-    if manifest["grid_size"] < 129:
-        raise SystemExit("terrain grid is below production floor")
+    if manifest["grid_size"] < MIN_GRID_SIZE:
+        raise SystemExit(f"terrain grid is below production floor: {manifest['grid_size']} < {MIN_GRID_SIZE}")
 
     scene = trimesh.load(args.model, force="scene", process=False)
     geometries = list(scene.geometry.values())
@@ -35,8 +39,10 @@ def main() -> None:
     vertices = np.asarray(terrain.vertices)
     if not np.isfinite(vertices).all():
         raise SystemExit("terrain contains NaN/Inf vertices")
-    if len(terrain.faces) < 100_000:
-        raise SystemExit(f"terrain triangle count too low: {len(terrain.faces)}")
+    if len(terrain.faces) < MIN_TERRAIN_TRIANGLES:
+        raise SystemExit(
+            f"terrain triangle count too low: {len(terrain.faces)} < {MIN_TERRAIN_TRIANGLES}"
+        )
 
     bounds = terrain.bounds
     width = float(bounds[1, 0] - bounds[0, 0])
@@ -47,9 +53,18 @@ def main() -> None:
     if relief < 2_000:
         raise SystemExit(f"terrain relief is implausibly low: {relief:.1f}m")
 
+    elevation = manifest.get("elevation_m", {})
+    max_elevation = float(elevation.get("max_sampled", 0))
+    if not 5_300 <= max_elevation <= 5_900:
+        raise SystemExit(f"unexpected Damavand maximum elevation: {max_elevation:.1f}m")
+
     source_tiles = manifest.get("source_tiles", [])
     if len(source_tiles) < 2:
         raise SystemExit("manifest does not record source tiles")
+
+    model = manifest.get("model", {})
+    if float(model.get("vertical_exaggeration", -1)) != 1.0:
+        raise SystemExit("Phase 2 terrain must preserve a 1:1 physical vertical ratio")
 
     print(
         f"terrain validation OK: {len(terrain.vertices)} vertices, "
