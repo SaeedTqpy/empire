@@ -12,7 +12,8 @@ dist
 dist-ssr
 *.local
 
-# Generated terrain build cache
+# Generated terrain build caches
+.terrain-cache/
 .cache/
 .venv-terrain/
 
