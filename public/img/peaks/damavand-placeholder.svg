@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Mount Damavand terrain placeholder</title>
+  <desc id="desc">A minimal mountain silhouette used until the real Damavand terrain and satellite texture are added.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9f0f2"/>
+      <stop offset="1" stop-color="#f4eee4"/>
+    </linearGradient>
+    <linearGradient id="mountain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8b9ca0"/>
+      <stop offset="1" stop-color="#53666a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#sky)"/>
+  <path d="M70 650 L245 565 L350 485 L430 430 L505 335 L600 105 L685 330 L755 405 L835 472 L930 535 L1130 650 Z" fill="url(#mountain)"/>
+  <path d="M600 105 L548 255 L585 230 L613 275 L646 248 L685 330 Z" fill="#eef2f1" opacity="0.9"/>
+  <path d="M70 650 H1130" stroke="#304347" stroke-width="3" opacity="0.35"/>
+  <text x="72" y="92" fill="#304347" font-family="Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="4">MOUNT DAMAVAND</text>
+  <text x="74" y="132" fill="#65777a" font-family="Arial, sans-serif" font-size="21" letter-spacing="2">PHASE 1 · TERRAIN MODEL PENDING</text>
+</svg>
