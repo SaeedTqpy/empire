@@ -14,6 +14,7 @@ export function peakToViewerModel(peak: Peak): Empire {
     subtitle: peak.subtitle,
     description: peak.description,
     modelPath: peak.modelPath,
+    imageryAttribution: peak.terrain.imageryAttribution,
     tint: peak.tint,
     camera: peak.camera,
     facts: [],
