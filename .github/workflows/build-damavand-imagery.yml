@@ -91,12 +91,17 @@ jobs:
             --texture .cache/imagery/damavand-sentinel.jpg \
             --output .cache/imagery/damavand-textured.raw.glb
 
-      - name: Draco-compress textured terrain
+      - name: Compress geometry and satellite texture
         run: |
           npx gltf-transform draco \
             .cache/imagery/damavand-textured.raw.glb \
-            public/models/damavand.glb \
+            .cache/imagery/damavand-draco.glb \
             --method edgebreaker
+
+          npx gltf-transform webp \
+            .cache/imagery/damavand-draco.glb \
+            public/models/damavand.glb \
+            --slots "baseColor"
 
       - name: Inspect and size-gate final assets
         run: |
