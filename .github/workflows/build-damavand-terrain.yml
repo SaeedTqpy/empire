@@ -24,6 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: iran-peaks
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -37,6 +38,14 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+
+      - name: Cache source DEM tiles
+        uses: actions/cache@v4
+        with:
+          path: .terrain-cache
+          key: damavand-skadi-${{ runner.os }}-${{ hashFiles('scripts/terrain/damavand.json') }}
+          restore-keys: |
+            damavand-skadi-${{ runner.os }}-
 
       - name: Install terrain dependencies
         run: pip install -r scripts/terrain/requirements.txt
@@ -76,12 +85,25 @@ jobs:
 
       - name: Commit generated terrain
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # The branch may have received app/data commits while the DEM was
-          # downloading. Rebase before staging generated files so the bot push
-          # is always fast-forward and never overwrites newer work.
-          git pull --rebase origin iran-peaks
+
+          # Generated binaries are intentionally kept outside the worktree
+          # while we fast-forward to the newest branch head. This prevents an
+          # app/data commit that landed during the DEM build from making
+          # `git pull --rebase` fail on unstaged generated files.
+          tmp_dir="$(mktemp -d)"
+          cp public/models/damavand.glb "$tmp_dir/damavand.glb"
+          cp public/models/damavand.terrain.json "$tmp_dir/damavand.terrain.json"
+
+          git fetch origin iran-peaks
+          git reset --hard origin/iran-peaks
+
+          cp "$tmp_dir/damavand.glb" public/models/damavand.glb
+          cp "$tmp_dir/damavand.terrain.json" public/models/damavand.terrain.json
+          rm -rf "$tmp_dir"
+
           git add public/models/damavand.glb public/models/damavand.terrain.json
           if git diff --cached --quiet; then
             echo "Terrain is already up to date."
