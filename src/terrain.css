@@ -1,0 +1,49 @@
+/* Phase 3 mountain presentation overrides.
+   The page can keep the editorial atlas shell while the 3D stage reads as an
+   outdoor alpine scene instead of the original parchment museum turntable. */
+
+.viewer-stage {
+  background:
+    radial-gradient(110% 70% at 50% 72%, rgb(246 244 231 / 0.88) 0%, rgb(218 226 225 / 0.72) 38%, transparent 67%),
+    linear-gradient(180deg, #aec9da 0%, #d6e5e8 43%, #eee9dc 76%, #d7d0bf 100%);
+}
+
+.viewer-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 42% at 78% 16%, rgb(255 246 211 / 0.34), transparent 72%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.07), transparent 38%);
+  mix-blend-mode: screen;
+}
+
+.viewer-attribution {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 18;
+  max-width: min(72%, 360px);
+  padding: 4px 7px;
+  border: 1px solid rgb(255 255 255 / 0.42);
+  border-radius: 7px;
+  background: rgb(35 48 54 / 0.48);
+  color: rgb(249 251 250 / 0.92);
+  font-size: 10px;
+  line-height: 1.25;
+  letter-spacing: 0.015em;
+  text-align: right;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+@media (max-width: 639px) {
+  .viewer-attribution {
+    right: 7px;
+    bottom: 6px;
+    max-width: calc(100% - 76px);
+    font-size: 9px;
+  }
+}
