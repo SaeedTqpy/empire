@@ -63,19 +63,25 @@ const DAMAVAND_VIEWER_MODEL = peakToViewerModel(damavand);
 /** @deprecated Viewer compatibility only. Use PEAKS in product code. */
 export const EMPIRES: Empire[] = [DAMAVAND_VIEWER_MODEL];
 /** @deprecated Viewer compatibility only. Use peakById. */
-export const empireById = (_id: string): Empire => DAMAVAND_VIEWER_MODEL;
+export const empireById = (id: string): Empire => {
+  void id;
+  return DAMAVAND_VIEWER_MODEL;
+};
 /** @deprecated Viewer compatibility only. Use DEFAULT_PEAK_ID. */
 export const DEFAULT_EMPIRE_ID = "damavand";
 /** @deprecated Peak media lives on Peak.media. */
-export const empireImages = (_empire: Empire) => ({
-  thumbnail: damavand.media.thumbnail,
-  hero: damavand.media.hero,
-  interior: damavand.media.hero,
-  floorPlan: damavand.media.hero,
-  artifacts: damavand.media.hero,
-  dailyLife: damavand.media.hero,
-  map: damavand.media.hero,
-});
+export const empireImages = (empire: Empire) => {
+  void empire;
+  return {
+    thumbnail: damavand.media.thumbnail,
+    hero: damavand.media.hero,
+    interior: damavand.media.hero,
+    floorPlan: damavand.media.hero,
+    artifacts: damavand.media.hero,
+    dailyLife: damavand.media.hero,
+    map: damavand.media.hero,
+  };
+};
 
 /** @deprecated Legacy modal contract retained only until old files are removed. */
 export interface SearchEntry {
