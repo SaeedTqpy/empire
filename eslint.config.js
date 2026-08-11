@@ -20,4 +20,23 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // shadcn/ui primitives intentionally co-locate component helpers and
+    // generated variants. Keep the rest of ESLint active, but disable the two
+    // React rules that conflict with the generated source shape.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      'react-hooks/purity': 'off',
+    },
+  },
+  {
+    // ViewerEngine extends Three.js prototypes and bridges addon types that do
+    // not expose all runtime members. Preserve the upstream engine in phase 1
+    // without weakening no-explicit-any for product/domain code.
+    files: ['src/three/engine.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ])
