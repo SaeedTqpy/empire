@@ -29,7 +29,7 @@ export const damavand: Peak = {
   terrain: {
     manifestPath: "/models/damavand.terrain.json",
     extentKm: 30,
-    gridSize: 257,
+    gridSize: 513,
     verticalExaggeration: 1.0,
     sourceLabel: "Skadi / SRTM via AWS Open Data Terrain Tiles",
   },
