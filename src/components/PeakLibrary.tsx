@@ -1,0 +1,88 @@
+import { memo, useRef } from "react";
+import type { Peak } from "@/types/peak";
+import { BookmarkIcon, HeartIcon, ArrowRightIcon } from "./icons";
+
+interface Props {
+  peaks: Peak[];
+  activeId: string;
+  favorites: Set<string>;
+  onSelect: (id: string) => void;
+  onToggleFav: (id: string) => void;
+  onViewAll: () => void;
+  onPrefetch?: (id: string) => void;
+}
+
+export const PeakLibrary = memo(function PeakLibrary({
+  peaks,
+  activeId,
+  favorites,
+  onSelect,
+  onToggleFav,
+  onViewAll,
+  onPrefetch,
+}: Props) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const onKey = (e: React.KeyboardEvent, idx: number) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const next = e.key === "ArrowDown" ? idx + 1 : idx - 1;
+    const clamped = (next + peaks.length) % peaks.length;
+    const id = peaks[clamped].id;
+    onSelect(id);
+    listRef.current?.querySelectorAll<HTMLElement>("[data-peak]")[clamped]?.focus();
+  };
+
+  return (
+    <aside className="flex h-full w-full flex-col gap-3 overflow-hidden" aria-label="Peak library">
+      <div className="flex flex-none items-center justify-between px-1 pt-1">
+        <span className="kicker !text-[0.78rem]">Iran Peak Library</span>
+        <BookmarkIcon className="h-[18px] w-[18px] text-slateblue" aria-hidden />
+      </div>
+
+      <div ref={listRef} className="atlas-scroll -mx-2 min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2 pb-2" role="listbox" aria-label="Iranian peaks">
+        {peaks.map((peak, i) => {
+          const active = peak.id === activeId;
+          const fav = favorites.has(peak.id);
+          return (
+            <button
+              key={peak.id}
+              data-peak
+              role="option"
+              aria-selected={active}
+              tabIndex={active ? 0 : -1}
+              onKeyDown={(ev) => onKey(ev, i)}
+              onMouseEnter={() => onPrefetch?.(peak.id)}
+              onFocus={() => onPrefetch?.(peak.id)}
+              onClick={() => onSelect(peak.id)}
+              className={`empire-card ${active ? "is-active" : ""}`}
+            >
+              <img className="thumb" src={peak.media.thumbnail} alt={`${peak.name} preview`} loading="lazy" draggable={false} />
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="font-display block text-[0.98rem] font-bold leading-[1.1] text-ink">{peak.name}</span>
+                <span className="mt-0.5 block truncate text-[0.78rem] text-ink-muted">{peak.elevationM.toLocaleString()} m · {peak.range}</span>
+              </span>
+              <span
+                role="button"
+                tabIndex={-1}
+                aria-label={fav ? "Remove favorite" : "Mark favorite"}
+                className={`heart flex-none text-terracotta ${fav ? "is-fav" : ""}`}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  onToggleFav(peak.id);
+                }}
+              >
+                <HeartIcon className="h-[18px] w-[18px]" filled={fav || active} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <button onClick={onViewAll} className="btn-outline flex-none !justify-between px-4">
+        <span className="font-display !text-[0.95rem] font-semibold">View all peaks</span>
+        <ArrowRightIcon className="h-4 w-4" />
+      </button>
+    </aside>
+  );
+});
