@@ -55,6 +55,10 @@ export interface PeakMedia {
 export interface PeakTerrain {
   /** Build manifest containing bbox, source tiles and coordinate contract. */
   manifestPath: string;
+  /** Phase 3 imagery manifest containing scene IDs and processing metadata. */
+  imageryManifestPath?: string;
+  /** Public attribution required by the imagery source. */
+  imageryAttribution?: string;
   /** Square source area represented by the terrain mesh. */
   extentKm: number;
   /** Samples on each axis before mesh compression. */
