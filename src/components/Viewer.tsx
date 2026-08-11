@@ -218,10 +218,10 @@ export const Viewer = memo(function Viewer({
   };
 
   const LAYER_ITEMS: { key: "labels" | "grid" | "wire" | "xray"; label: string; icon: typeof GridIcon }[] = [
-    { key: "labels", label: "Hotspot pins", icon: EyeIcon },
-    { key: "grid", label: "Turntable grid", icon: GridIcon },
+    { key: "labels", label: "Peak markers", icon: EyeIcon },
+    { key: "grid", label: "Terrain grid", icon: GridIcon },
     { key: "wire", label: "Wireframe", icon: WireIcon },
-    { key: "xray", label: "X-ray section", icon: XrayIcon },
+    { key: "xray", label: "Terrain x-ray", icon: XrayIcon },
   ];
 
   return (
@@ -248,6 +248,11 @@ export const Viewer = memo(function Viewer({
         }}
       >
         <canvas ref={canvasRef} className="block h-full w-full touch-none" aria-label={`3D model of the ${empire.dwelling}`} />
+        {empire.imageryAttribution && (
+          <div className="viewer-attribution" aria-label="Satellite imagery attribution">
+            {empire.imageryAttribution}
+          </div>
+        )}
         {/* holds the outgoing frame still while the next dwelling takes its
             place underneath, so a swap dissolves instead of blinking */}
       </div>

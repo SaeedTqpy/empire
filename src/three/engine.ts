@@ -76,7 +76,7 @@ export class ViewerEngine {
   private glowShell: THREE.Mesh | null = null;
   private glowPulse = uniform(0.6);
   private rimColor = uniform(new THREE.Color(0xffe8c8));
-  private rimIntensity = uniform(0.14);
+  private rimIntensity = uniform(0.055);
   private wireOverlay: THREE.Mesh | null = null;
   private grid: THREE.PolarGridHelper | null = null;
   /* lighting rig — kept as fields so an empire swap can re-tint it */
@@ -85,7 +85,7 @@ export class ViewerEngine {
   private bounceLight!: THREE.DirectionalLight;
   private envTex: THREE.Texture | null = null;
   private contact: THREE.Mesh | null = null;
-  private contactOpacity = uniform(0.46);
+  private contactOpacity = uniform(0.24);
   private occlusionTimer = 0;
   private occlusionCache = new Map<string, boolean>();
   /** anchors resolved onto the mesh surface, keyed empireId:anchor */
@@ -138,7 +138,7 @@ export class ViewerEngine {
     // mapping would drain the warmth out of a rendered parchment gradient
     renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.02;
+    renderer.toneMappingExposure = 1.08;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     await renderer.init();
@@ -147,7 +147,7 @@ export class ViewerEngine {
     const scene = new THREE.Scene();
     this.scene = scene;
 
-    scene.fog = new THREE.Fog(0xf3ead9, 9, 26);
+    scene.fog = new THREE.Fog(0xc7d7df, 7.5, 22);
 
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.05, 60);
     this.camera.position.set(-1.7, 1.6, 2.4);
@@ -158,16 +158,16 @@ export class ViewerEngine {
     if (this.envTex) {
       scene.environment = this.envTex;
       // enough ambient to fill shadow, not so much that everything goes flat
-      scene.environmentIntensity = 0.4;
+      scene.environmentIntensity = 0.62;
     }
 
     // ── Lighting: hard sun over soft ambient. The ambient terms stay low so
     //    that form reads through shadow rather than washing out. ──
-    const hemi = new THREE.HemisphereLight(0xfff6e8, 0xc9b092, 0.18);
+    const hemi = new THREE.HemisphereLight(0xdcebf4, 0x706b5c, 0.34);
     scene.add(hemi);
 
-    const key = new THREE.DirectionalLight(0xfff4e6, 3.1);
-    key.position.set(3.0, 4.4, 2.6);
+    const key = new THREE.DirectionalLight(0xfff3dc, 3.6);
+    key.position.set(4.5, 6.0, 2.8);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.camera.left = -2.2;
@@ -179,7 +179,7 @@ export class ViewerEngine {
     key.shadow.bias = -0.00016;
     key.shadow.normalBias = 0.018;
     // tight penumbra — architecture wants crisp eaves, not a haze
-    key.shadow.radius = 2.6;
+    key.shadow.radius = 1.8;
     // Orbiting moves the camera, not the building, so the shadow map is only
     // redrawn when the geometry actually changes — the biggest per-frame win.
     key.shadow.autoUpdate = false;
@@ -188,18 +188,18 @@ export class ViewerEngine {
     this.keyLight = key;
 
     // cool sky fill opposite the key — keeps shadow sides from going muddy
-    const fill = new THREE.DirectionalLight(0xd6e2f2, 0.22);
+    const fill = new THREE.DirectionalLight(0xb8d0df, 0.30);
     fill.position.set(-3.6, 2.1, -1.7);
     scene.add(fill);
 
     // warm back rim — separates the silhouette from the parchment backdrop
-    const rim = new THREE.DirectionalLight(0xffd39a, 0.72);
+    const rim = new THREE.DirectionalLight(0xffe0ad, 0.32);
     rim.position.set(-2.1, 2.7, -3.7);
     scene.add(rim);
     this.rimLight = rim;
 
     // floor bounce — a soft upward warmth under eaves and colonnades
-    const bounce = new THREE.DirectionalLight(0xffe3c2, 0.16);
+    const bounce = new THREE.DirectionalLight(0xc9c0a8, 0.12);
     bounce.position.set(0.5, -2.0, 2.4);
     scene.add(bounce);
     this.bounceLight = bounce;
@@ -209,13 +209,13 @@ export class ViewerEngine {
     let ground: THREE.Mesh;
     try {
       const gm = new THREE.MeshStandardNodeMaterial({ roughness: 1, metalness: 0, transparent: true });
-      gm.colorNode = color(0xfaf3e6);
+      gm.colorNode = color(0xbfc1b6);
       gm.opacityNode = smoothstep(0.62, 0.98, positionLocal.xy.length().div(4.2)).oneMinus();
       ground = new THREE.Mesh(new THREE.CircleGeometry(4.2, 96), gm);
     } catch {
       ground = new THREE.Mesh(
         new THREE.CircleGeometry(9, 72),
-        new THREE.MeshStandardMaterial({ color: 0xf6eddc, roughness: 1, metalness: 0 }),
+        new THREE.MeshStandardMaterial({ color: 0xb9baae, roughness: 1, metalness: 0 }),
       );
     }
     ground.rotation.x = -Math.PI / 2;
@@ -301,16 +301,16 @@ export class ViewerEngine {
       const ctx = c.getContext("2d");
       if (!ctx) return null;
       const sky = ctx.createLinearGradient(0, 0, 0, 32);
-      sky.addColorStop(0.0, "#fffdf6"); // zenith
-      sky.addColorStop(0.42, "#f7eedd");
-      sky.addColorStop(0.52, "#ead9be"); // horizon
-      sky.addColorStop(1.0, "#b6a184"); // floor bounce
+      sky.addColorStop(0.0, "#9fc3da"); // zenith
+      sky.addColorStop(0.42, "#c6dce6");
+      sky.addColorStop(0.58, "#e7ece8"); // horizon haze
+      sky.addColorStop(1.0, "#8d8b79"); // terrain bounce
       ctx.fillStyle = sky;
       ctx.fillRect(0, 0, 64, 32);
       // warm sun patch on the key side
       const sun = ctx.createRadialGradient(46, 5, 0, 46, 5, 22);
-      sun.addColorStop(0, "rgba(255,240,212,0.95)");
-      sun.addColorStop(1, "rgba(255,240,212,0)");
+      sun.addColorStop(0, "rgba(255,244,214,0.88)");
+      sun.addColorStop(1, "rgba(255,244,214,0)");
       ctx.fillStyle = sun;
       ctx.fillRect(0, 0, 64, 32);
       const tex = new THREE.CanvasTexture(c);
@@ -328,10 +328,10 @@ export class ViewerEngine {
   setTint(hex: string, dur = 1.1) {
     const tint = new THREE.Color(hex);
     const targets: [THREE.Color | undefined, THREE.Color][] = [
-      [this.rimLight?.color, new THREE.Color(0xffd9a4).lerp(tint, 0.45)],
-      [this.keyLight?.color, new THREE.Color(0xfff2e2).lerp(tint, 0.16)],
-      [this.bounceLight?.color, new THREE.Color(0xffe7cb).lerp(tint, 0.35)],
-      [this.rimColor.value as THREE.Color, new THREE.Color(0xffe8c8).lerp(tint, 0.4)],
+      [this.rimLight?.color, new THREE.Color(0xd2e4ee).lerp(tint, 0.32)],
+      [this.keyLight?.color, new THREE.Color(0xfff3dc).lerp(tint, 0.10)],
+      [this.bounceLight?.color, new THREE.Color(0xc8c2ae).lerp(tint, 0.18)],
+      [this.rimColor.value as THREE.Color, new THREE.Color(0xdcebf2).lerp(tint, 0.28)],
     ];
     targets.forEach(([src, to]) => {
       if (!src) return;
@@ -636,7 +636,7 @@ export class ViewerEngine {
 
     if (instant) {
       stand();
-      this.contactOpacity.value = 0.46;
+      this.contactOpacity.value = 0.24;
       handover();
       return Promise.resolve();
     }
@@ -648,7 +648,7 @@ export class ViewerEngine {
       m.group.rotation.set(0, THREE.MathUtils.degToRad(spin.deg), 0);
       m.group.position.set(0, spin.hop, 0);
       // it lightens on its footing as it comes up to speed
-      this.contactOpacity.value = 0.46 * Math.max(0.35, 1 - spin.hop / (m.size.y * 0.09));
+      this.contactOpacity.value = 0.24 * Math.max(0.35, 1 - spin.hop / (m.size.y * 0.09));
     };
 
     const tl = gsap.timeline();
@@ -692,7 +692,7 @@ export class ViewerEngine {
         this.activeResolve = null;
         this.staged = null;
         stand();
-        this.contactOpacity.value = 0.46;
+        this.contactOpacity.value = 0.24;
         this.flushRetired();
         this.markShadowDirty(2);
         resolve();
