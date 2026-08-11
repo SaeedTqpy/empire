@@ -17,7 +17,6 @@ import argparse
 import gzip
 import json
 import math
-import os
 import time
 import urllib.request
 from pathlib import Path
@@ -60,8 +59,6 @@ def tile_parts(lat0: int, lon0: int) -> tuple[str, str]:
 
 def required_tiles(bbox: tuple[float, float, float, float]) -> list[tuple[int, int]]:
     west, south, east, north = bbox
-    # A point exactly on an integer boundary belongs to the tile on its
-    # north/east side, hence the tiny epsilon only on max bounds.
     lat_min = math.floor(south)
     lat_max = math.floor(north - 1e-12)
     lon_min = math.floor(west)
@@ -81,10 +78,9 @@ def download(url: str, destination: Path, retries: int = 4) -> None:
                 while chunk := response.read(1024 * 1024):
                     out.write(chunk)
             return
-        except Exception as exc:  # network retries are intentionally broad
+        except Exception as exc:
             error = exc
-            if destination.exists():
-                destination.unlink()
+            destination.unlink(missing_ok=True)
             time.sleep(2**attempt)
     raise RuntimeError(f"Failed to download {url}: {error}")
 
@@ -96,8 +92,7 @@ def read_hgt(path: Path) -> np.ndarray:
     side = math.isqrt(samples)
     if side * side != samples:
         raise ValueError(f"Unexpected HGT byte length for {path}: {len(raw)}")
-    data = np.frombuffer(raw, dtype=">i2").reshape(side, side).astype(np.float32)
-    return data
+    return np.frombuffer(raw, dtype=">i2").reshape(side, side).astype(np.float32)
 
 
 def bilinear_from_tile(tile: np.ndarray, lat0: int, lon0: int, lats: np.ndarray, lons: np.ndarray) -> np.ndarray:
@@ -116,7 +111,6 @@ def bilinear_from_tile(tile: np.ndarray, lat0: int, lon0: int, lats: np.ndarray,
     q10 = tile[y0, x1]
     q01 = tile[y1, x0]
     q11 = tile[y1, x1]
-
     sampled = (
         q00 * (1.0 - fx) * (1.0 - fy)
         + q10 * fx * (1.0 - fy)
@@ -166,20 +160,19 @@ def sample_dem(config: dict, bbox: tuple[float, float, float, float], cache_dir:
     tile_records: list[dict] = []
 
     template = config["source"]["url_template"]
+    tile_key_lat = np.floor(lats + 1e-12).astype(np.int16)
+    tile_key_lon = np.floor(lons + 1e-12).astype(np.int16)
+
     for lat0, lon0 in required_tiles(bbox):
         lat_band, tile = tile_parts(lat0, lon0)
         url = template.format(lat_band=lat_band, tile=tile)
         target = cache_dir / f"{tile}.hgt.gz"
-        print(f"DEM tile: {tile} <- {url}", flush=True)
+        print(f"DEM tile: {tile}", flush=True)
         download(url, target)
         data = read_hgt(target)
-
-        tile_key_lat = np.floor(lats + 1e-12).astype(np.int16)
-        tile_key_lon = np.floor(lons + 1e-12).astype(np.int16)
         mask = (tile_key_lat == lat0) & (tile_key_lon == lon0)
         if mask.any():
             heights[mask] = bilinear_from_tile(data, lat0, lon0, lats[mask], lons[mask])
-
         tile_records.append({"tile": tile, "url": url, "samples_per_side": int(data.shape[0])})
 
     if (~np.isfinite(heights)).any():
@@ -187,7 +180,26 @@ def sample_dem(config: dict, bbox: tuple[float, float, float, float], cache_dir:
     return heights, tile_records
 
 
-def build_top_mesh(heights: np.ndarray, bbox: tuple[float, float, float, float], base_elevation: float, color: list[float]) -> trimesh.Trimesh:
+def heightfield_normals(y: np.ndarray, x_axis: np.ndarray, z_axis: np.ndarray) -> np.ndarray:
+    """Return smooth unit normals directly from the regular height field.
+
+    Generic mesh adjacency is unnecessary for a regular DEM grid and becomes
+    disproportionately expensive as triangle density grows. Gradients preserve
+    the same physical metre scale while keeping the build O(number of samples).
+    """
+    dy_dz, dy_dx = np.gradient(y, z_axis, x_axis, edge_order=2)
+    normals = np.stack((-dy_dx, np.ones_like(y), -dy_dz), axis=-1)
+    lengths = np.linalg.norm(normals, axis=-1, keepdims=True)
+    normals /= np.maximum(lengths, 1e-12)
+    return normals.reshape(-1, 3).astype(np.float32)
+
+
+def build_top_mesh(
+    heights: np.ndarray,
+    bbox: tuple[float, float, float, float],
+    base_elevation: float,
+    color: list[float],
+) -> trimesh.Trimesh:
     n = heights.shape[0]
     west, south, east, north = bbox
     center_lat = (south + north) * 0.5
@@ -201,7 +213,6 @@ def build_top_mesh(heights: np.ndarray, bbox: tuple[float, float, float, float],
     y = heights.astype(np.float64) - base_elevation
 
     vertices = np.column_stack((x.ravel(), y.ravel(), z.ravel())).astype(np.float32)
-
     rows, cols = np.meshgrid(np.arange(n - 1), np.arange(n - 1), indexing="ij")
     a = (rows * n + cols).ravel()
     b = a + 1
@@ -218,7 +229,7 @@ def build_top_mesh(heights: np.ndarray, bbox: tuple[float, float, float, float],
     visual = TextureVisuals(uv=uv, material=material)
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, visual=visual, process=False)
     mesh.metadata["name"] = "Damavand Terrain"
-    _ = mesh.vertex_normals
+    mesh.vertex_normals = heightfield_normals(y, x_axis, z_axis)
     return mesh
 
 
@@ -270,8 +281,10 @@ def main() -> None:
     elevation_min = float(np.min(heights))
     elevation_max = float(np.max(heights))
     base_elevation = math.floor(elevation_min - float(config.get("base_depth_m", 100.0)))
+    print(f"DEM sampled: {elevation_min:.1f}..{elevation_max:.1f} m", flush=True)
 
     top = build_top_mesh(heights, bbox, base_elevation, config["material"]["base_color"])
+    print(f"Top mesh: {len(top.vertices)} vertices / {len(top.faces)} triangles", flush=True)
     skirt = build_skirt(top, int(config["grid_size"]))
     export_scene(top, skirt, args.output)
 
