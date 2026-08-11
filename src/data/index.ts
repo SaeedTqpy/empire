@@ -1,4 +1,6 @@
 import type { Peak } from "@/types/peak";
+import type { Empire } from "@/types/empire";
+import { peakToViewerModel } from "@/lib/peak-viewer-adapter";
 import { damavand } from "./peaks/damavand";
 
 /** Peak-first runtime dataset. */
@@ -49,41 +51,33 @@ export function buildPeakSearchIndex(): PeakSearchEntry[] {
 }
 
 /* --------------------------------------------------------------------------
- * Legacy Empire exports
+ * Temporary viewer compatibility exports
  * --------------------------------------------------------------------------
- * These stay temporarily so the original, currently-unused modal/components
- * still type-check while the runtime is migrated incrementally. The new app
- * does not render this dataset. Remove this compatibility block once the old
- * Empire-only components are deleted in a later cleanup pass.
+ * Viewer.tsx still consumes the original Empire-shaped rendering contract in
+ * phase 1. It now receives ONLY the Damavand adapter, so no civilization data
+ * is rendered or preloaded at runtime. This block disappears when the terrain
+ * viewer becomes Peak-native.
  */
-import type { Empire } from "@/types/empire";
-import { roman } from "./empires/roman";
-import { egypt } from "./empires/egypt";
-import { persian } from "./empires/persian";
-import { han } from "./empires/han";
-import { byzantine } from "./empires/byzantine";
-import { ottoman } from "./empires/ottoman";
-import { mughal } from "./empires/mughal";
-import { inca } from "./empires/inca";
+const DAMAVAND_VIEWER_MODEL = peakToViewerModel(damavand);
 
-/** @deprecated Use PEAKS. */
-export const EMPIRES: Empire[] = [roman, egypt, persian, han, byzantine, ottoman, mughal, inca];
-/** @deprecated Use peakById. */
-export const empireById = (id: string): Empire => EMPIRES.find((empire) => empire.id === id) ?? EMPIRES[0];
-/** @deprecated Use DEFAULT_PEAK_ID. */
-export const DEFAULT_EMPIRE_ID = "roman";
+/** @deprecated Viewer compatibility only. Use PEAKS in product code. */
+export const EMPIRES: Empire[] = [DAMAVAND_VIEWER_MODEL];
+/** @deprecated Viewer compatibility only. Use peakById. */
+export const empireById = (_id: string): Empire => DAMAVAND_VIEWER_MODEL;
+/** @deprecated Viewer compatibility only. Use DEFAULT_PEAK_ID. */
+export const DEFAULT_EMPIRE_ID = "damavand";
 /** @deprecated Peak media lives on Peak.media. */
-export const empireImages = (empire: Empire) => ({
-  thumbnail: `/img/${empire.id}/thumbnail.webp`,
-  hero: `/img/${empire.id}/hero.webp`,
-  interior: empire.interior.image,
-  floorPlan: empire.floorPlan.image,
-  artifacts: empire.artifacts.image,
-  dailyLife: empire.dailyLife.image,
-  map: empire.geography.image,
+export const empireImages = (_empire: Empire) => ({
+  thumbnail: damavand.media.thumbnail,
+  hero: damavand.media.hero,
+  interior: damavand.media.hero,
+  floorPlan: damavand.media.hero,
+  artifacts: damavand.media.hero,
+  dailyLife: damavand.media.hero,
+  map: damavand.media.hero,
 });
 
-/** @deprecated Legacy search contract retained for old modal compilation. */
+/** @deprecated Legacy modal contract retained only until old files are removed. */
 export interface SearchEntry {
   kind: "empire" | "dwelling" | "feature" | "room" | "artifact" | "material";
   title: string;
@@ -94,22 +88,12 @@ export interface SearchEntry {
 
 /** @deprecated Use buildPeakSearchIndex. */
 export function buildSearchIndex(): SearchEntry[] {
-  const out: SearchEntry[] = [];
-  for (const empire of EMPIRES) {
-    out.push({ kind: "empire", title: empire.name, subtitle: `${empire.dwelling} — ${empire.subtitle}`, empireId: empire.id });
-    out.push({ kind: "dwelling", title: empire.dwelling, subtitle: `Dwelling of ${empire.name}`, empireId: empire.id });
-    for (const hotspot of empire.hotspots) {
-      out.push({ kind: "feature", title: hotspot.title, subtitle: `${empire.dwelling} · ${hotspot.short}`, empireId: empire.id, hotspotId: hotspot.id });
-    }
-    for (const room of empire.floorPlan.rooms) {
-      out.push({ kind: "room", title: room.name, subtitle: `${empire.dwelling} floor plan`, empireId: empire.id });
-    }
-    for (const artifact of empire.artifacts.items) {
-      out.push({ kind: "artifact", title: artifact.name, subtitle: `${empire.dwelling} · ${artifact.purpose}`, empireId: empire.id });
-    }
-    for (const keyword of empire.keywords) {
-      out.push({ kind: "material", title: keyword, subtitle: `Related to ${empire.name}`, empireId: empire.id });
-    }
-  }
-  return out;
+  return [
+    {
+      kind: "empire",
+      title: damavand.name,
+      subtitle: `${damavand.elevationM.toLocaleString()} m · ${damavand.range}`,
+      empireId: damavand.id,
+    },
+  ];
 }
