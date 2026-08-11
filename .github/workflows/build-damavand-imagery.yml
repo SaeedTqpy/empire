@@ -91,17 +91,19 @@ jobs:
             --texture .cache/imagery/damavand-sentinel.jpg \
             --output .cache/imagery/damavand-textured.raw.glb
 
-      - name: Compress geometry and satellite texture
+      - name: Compress satellite texture and geometry
         run: |
-          npx gltf-transform draco \
-            .cache/imagery/damavand-textured.raw.glb \
-            .cache/imagery/damavand-draco.glb \
-            --method edgebreaker
-
+          # Texture transforms decode Draco geometry, so encode WebP first and
+          # apply Draco last. The final GLB therefore retains both extensions.
           npx gltf-transform webp \
-            .cache/imagery/damavand-draco.glb \
-            public/models/damavand.glb \
+            .cache/imagery/damavand-textured.raw.glb \
+            .cache/imagery/damavand-webp.raw.glb \
             --slots "baseColor"
+
+          npx gltf-transform draco \
+            .cache/imagery/damavand-webp.raw.glb \
+            public/models/damavand.glb \
+            --method edgebreaker
 
       - name: Inspect and size-gate final assets
         run: |
