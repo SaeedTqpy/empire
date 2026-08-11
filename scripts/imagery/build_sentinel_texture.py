@@ -29,6 +29,7 @@ import numpy as np
 import rasterio
 from PIL import Image, ImageEnhance, ImageFilter
 from rasterio.enums import Resampling
+from rasterio.fill import fillnodata
 from rasterio.transform import from_bounds
 from rasterio.warp import reproject
 
@@ -166,6 +167,64 @@ def tone_map(rgb: np.ndarray, config: dict[str, Any]) -> np.ndarray:
     return np.clip(rgb, 0.0, 1.0)
 
 
+def repair_residual_nodata(composite: np.ndarray) -> np.ndarray:
+    """Interpolate the tiny reprojection/cloud-mask seams left after compositing.
+
+    The quality gate is evaluated *before* this function. This is intentionally
+    not a way to rescue a poor source scene: only a composite with >=97% real
+    valid coverage reaches here. GDAL's fillnodata then closes narrow tile-edge
+    and reprojection seams using nearby valid reflectance values.
+    """
+
+    valid = np.all(np.isfinite(composite), axis=2)
+    if valid.all():
+        return composite
+
+    mask = valid.astype(np.uint8)
+    repaired = composite.copy()
+    for band_index in range(3):
+        band = repaired[:, :, band_index]
+        work = np.where(np.isfinite(band), band, 0.0).astype(np.float32)
+        repaired[:, :, band_index] = fillnodata(
+            work,
+            mask=mask,
+            max_search_distance=256,
+            smoothing_iterations=1,
+        )
+
+    # A no-data strip touching the outer raster edge can remain outside the
+    # interpolation envelope. Extend the nearest valid edge values inward only
+    # as a final boundary repair; this is bounded by the already-enforced 97%
+    # real-data coverage threshold above.
+    for _ in range(16):
+        missing = ~np.all(np.isfinite(repaired), axis=2)
+        if not missing.any():
+            return repaired
+        total = np.zeros_like(repaired, dtype=np.float32)
+        count = np.zeros(repaired.shape[:2], dtype=np.uint8)
+        for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            shifted = np.roll(repaired, (dy, dx), axis=(0, 1))
+            neighbour_valid = np.all(np.isfinite(shifted), axis=2)
+            if dy == -1:
+                neighbour_valid[-1, :] = False
+            elif dy == 1:
+                neighbour_valid[0, :] = False
+            if dx == -1:
+                neighbour_valid[:, -1] = False
+            elif dx == 1:
+                neighbour_valid[:, 0] = False
+            total[neighbour_valid] += shifted[neighbour_valid]
+            count[neighbour_valid] += 1
+        fill = missing & (count > 0)
+        if not fill.any():
+            break
+        repaired[fill] = total[fill] / count[fill, None]
+
+    if not np.all(np.isfinite(repaired)):
+        raise SystemExit("Satellite texture still contains no-data after bounded repair")
+    return repaired
+
+
 def main() -> None:
     args = parse_args()
     config = load_json(args.config)
@@ -249,32 +308,7 @@ def main() -> None:
     if coverage < 0.97:
         raise SystemExit(f"Satellite composite coverage too low: {coverage:.2%}")
 
-    # Small residual cloud-mask holes are filled from immediate neighbours;
-    # this is only for isolated pixels after the multi-scene composite.
-    for _ in range(10):
-        missing = ~np.all(np.isfinite(composite), axis=2)
-        if not missing.any():
-            break
-        total = np.zeros_like(composite, dtype=np.float32)
-        count = np.zeros((height, width), dtype=np.uint8)
-        for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            shifted = np.roll(composite, (dy, dx), axis=(0, 1))
-            valid = np.all(np.isfinite(shifted), axis=2)
-            if dy == -1:
-                valid[-1, :] = False
-            elif dy == 1:
-                valid[0, :] = False
-            if dx == -1:
-                valid[:, -1] = False
-            elif dx == 1:
-                valid[:, 0] = False
-            total[valid] += shifted[valid]
-            count[valid] += 1
-        fill = missing & (count > 0)
-        composite[fill] = total[fill] / count[fill, None]
-
-    if not np.all(np.isfinite(composite)):
-        raise SystemExit("Satellite texture still contains no-data after repair")
+    composite = repair_residual_nodata(composite)
 
     display = tone_map(composite, config)
     image = Image.fromarray(np.rint(display * 255.0).astype(np.uint8), mode="RGB")
@@ -309,6 +343,7 @@ def main() -> None:
             "rgb": "Sentinel-2 B04/B03/B02 surface reflectance",
             "reprojection": "EPSG:4326 exact terrain bbox",
             "cloud_mask": "SCL classes 0,1,3,7,8,9,10 when available",
+            "residual_nodata": "GDAL fillnodata after >=97% real source coverage",
             "color": config["color"],
         },
         "attribution": source["attribution"],
