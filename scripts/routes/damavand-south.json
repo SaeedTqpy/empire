@@ -1,0 +1,29 @@
+{
+  "peak_id": "damavand",
+  "route_id": "south-reference",
+  "name": "Damavand South Route",
+  "terrain_config": "scripts/terrain/damavand.json",
+  "output": "public/routes/damavand-south.json",
+  "source": {
+    "label": "OpenStreetMap trail geometry guided by published Damavand GPS landmarks",
+    "attribution": "© OpenStreetMap contributors · reference landmarks from Damavand GPS Waypoints",
+    "landmark_reference": "https://www.damawand.de/Info-Tech/GPS.html"
+  },
+  "reference_metrics": {
+    "distance_km": 8.0,
+    "ascent_m": 2630
+  },
+  "anchors": [
+    { "name": "Goosfand Sara", "lat": 35.9027778, "lon": 52.1094444, "elevation_m": 3040 },
+    { "name": "First Sign", "lat": 35.9072222, "lon": 52.1063889, "elevation_m": 3172 },
+    { "name": "Statues Ridge", "lat": 35.9100000, "lon": 52.1052778, "elevation_m": 3247 },
+    { "name": "Seasonal River 1", "lat": 35.9147222, "lon": 52.1038889, "elevation_m": 3423 },
+    { "name": "Seasonal River 2", "lat": 35.9216667, "lon": 52.1044444, "elevation_m": 3688 },
+    { "name": "Sang-e Do Shakh", "lat": 35.9283333, "lon": 52.1086111, "elevation_m": 4055 },
+    { "name": "Bargah Sevom", "lat": 35.9316667, "lon": 52.1083333, "elevation_m": 4220 },
+    { "name": "Bargah Sevom New Hut", "lat": 35.9325000, "lon": 52.1088889, "elevation_m": 4250 },
+    { "name": "First Ridge Start", "lat": 35.9383333, "lon": 52.1100000, "elevation_m": 4531 },
+    { "name": "First Ridge End", "lat": 35.9441667, "lon": 52.1088889, "elevation_m": 4912 },
+    { "name": "Damavand Summit", "lat": 35.9513000, "lon": 52.1097000, "elevation_m": 5610 }
+  ]
+}
