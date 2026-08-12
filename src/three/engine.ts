@@ -183,7 +183,7 @@ export class ViewerEngine {
 
     scene.fog = new THREE.Fog(0xc7d7df, 7.5, 22);
 
-    this.camera = new THREE.PerspectiveCamera(38, 1, 0.015, 60);
+    this.camera = new THREE.PerspectiveCamera(38, 1, 0.002, 60);
     this.camera.position.set(-1.7, 1.6, 2.4);
 
     // ── Image-based light: a warm gallery dome so PBR surfaces pick up
@@ -304,9 +304,9 @@ export class ViewerEngine {
     const controls = new OrbitControls(this.camera, this.canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
-    controls.minDistance = 0.32;
+    controls.minDistance = 0.018;
     controls.maxDistance = 6.5;
-    controls.zoomSpeed = 0.85;
+    controls.zoomSpeed = 0.72;
     controls.zoomToCursor = true;
     controls.maxPolarAngle = Math.PI * 0.52;
     controls.minPolarAngle = Math.PI * 0.12;
@@ -405,8 +405,8 @@ export class ViewerEngine {
     this.camera.updateProjectionMatrix();
     // Resolution budget: full DPR on modest canvases, scaled back on large
     // ones so a retina 2× never asks for more fragments than it can afford.
-    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    const MAX_PIXELS = 8_000_000;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const MAX_PIXELS = 12_000_000;
     const wanted = w * h * dpr * dpr;
     const ratio = wanted > MAX_PIXELS ? Math.max(1, dpr * Math.sqrt(MAX_PIXELS / wanted)) : dpr;
     this.renderer.setPixelRatio(ratio);

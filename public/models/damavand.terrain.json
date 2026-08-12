@@ -39,13 +39,13 @@
     "north": 36.086198054558686
   },
   "extent_km": 30.0,
-  "grid_size": 513,
-  "terrain_triangles": 524288,
-  "skirt_triangles": 4096,
+  "grid_size": 1025,
+  "terrain_triangles": 2097152,
+  "skirt_triangles": 8192,
   "elevation_m": {
-    "min_sampled": 880.01,
-    "max_sampled": 5595.48,
-    "base": 760
+    "min_sampled": 877.44,
+    "max_sampled": 5598.61,
+    "base": 757
   },
   "coordinate_contract": {
     "units": "meters",

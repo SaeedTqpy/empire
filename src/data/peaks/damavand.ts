@@ -29,13 +29,13 @@ export const damavand: Peak = {
   // Keep a version token on generated assets. Vite serves files from /public
   // at stable paths, and browsers can otherwise keep an older GLB after a
   // terrain/imagery rebuild because the filename itself did not change.
-  modelPath: "/models/damavand.glb?v=ultra4k-sentinel-20260812",
+  modelPath: "/models/damavand.glb?v=extreme1025-4k-20260812",
   terrain: {
     manifestPath: "/models/damavand.terrain.json",
     imageryManifestPath: "/models/damavand.imagery.json",
     imageryAttribution: "Contains modified Copernicus Sentinel data 2026",
     extentKm: 30,
-    gridSize: 513,
+    gridSize: 1025,
     verticalExaggeration: 1.0,
     sourceLabel: "SRTM terrain + Copernicus Sentinel-2 imagery",
   },
@@ -77,8 +77,8 @@ export const damavand: Peak = {
   ],
 
   media: {
-    thumbnail: "/img/peaks/damavand-sentinel.webp?v=ultra4k-sentinel-20260812",
-    hero: "/img/peaks/damavand-sentinel.webp?v=ultra4k-sentinel-20260812",
+    thumbnail: "/img/peaks/damavand-sentinel.webp?v=extreme1025-4k-20260812",
+    hero: "/img/peaks/damavand-sentinel.webp?v=extreme1025-4k-20260812",
   },
 
   keywords: ["damavand", "دماوند", "iran", "alborz", "mountain", "volcano", "peak", "terrain", "dem", "sentinel-2", "gpx", "route"],
