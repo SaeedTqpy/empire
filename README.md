@@ -4,9 +4,9 @@ Interactive 3D mountain atlas for Iran, starting with **Mount Damavand**.
 
 The product direction is a real-terrain experience: DEM-derived mountain geometry, satellite imagery, cinematic camera movement, climbing routes, shelters and mountain landmarks.
 
-## Current status — Phase 5 complete
+## Current status — Phase 6 complete
 
-Damavand now combines real terrain, georeferenced satellite imagery, an interruptible cinematic camera, and terrain-aware 3D climbing routes.
+Damavand now combines real terrain, georeferenced satellite imagery, an interruptible cinematic camera, terrain-aware 3D climbing routes, and geo-aware mountain markers that resolve onto the same DEM surface.
 
 ### Real terrain
 
@@ -42,9 +42,9 @@ The first visit flies into Damavand's hero angle and performs a short orbit. Poi
 
 ### Terrain-aware routes
 
-Phase 5 introduces a reusable route layer rather than baking route geometry into the mountain GLB.
+Phase 5 introduced a reusable route layer rather than baking route geometry into the mountain GLB.
 
-The built-in **Damavand South Route** is generated at build time from OpenStreetMap path geometry. Published Damavand GPS landmarks act as corridor controls between Goosfand Sara, Bargah Sevom and the summit. The current generated reference contains **167 geographic points**, and all ten landmark-to-landmark segments resolved through the OSM trail graph with **100% OSM corridor coverage** in the validated build. Its generated geometry is about **7.35 km**; the product card keeps the familiar published reference headline of about **8.0 km / 2,630 m ascent** while DEM-derived metrics are used for terrain sampling.
+The built-in **Damavand South Route** is generated at build time from OpenStreetMap path geometry. Published Damavand GPS landmarks act as corridor controls between Goosfand Sara, Bargah Sevom and the summit. The validated reference contains **167 geographic points**, and all ten landmark-to-landmark segments resolved through the OSM trail graph with **100% OSM corridor coverage** in that build. Its generated geometry is about **7.35 km**; the product card keeps the published reference headline of about **8.0 km / 2,630 m ascent** while DEM-derived metrics are used for terrain sampling.
 
 At runtime:
 
@@ -59,6 +59,51 @@ At runtime:
 
 The built-in line is a reference visualization, **not turn-by-turn navigation**. Route source, licensing and safety notes are documented in `ROUTE_ATTRIBUTION.md`.
 
+### Geo-aware mountain markers
+
+Phase 6 promotes mountain hotspots from normalized model anchors to WGS84 geographic data.
+
+The first Damavand marker set contains six categories:
+
+- **Summit** — Damavand Summit
+- **Shelter** — Bargah Sevom
+- **Landmark** — Sang-e Do Shakh
+- **Hazard context** — Upper Ridge / high-altitude context marker
+- **Water context** — Seasonal Watercourse
+- **Route context** — Goosfand Sara
+
+Marker coordinates reuse the same waypoint dataset that guides the Phase 5 South Route. Reference elevation remains metadata; visual Y is resolved independently from the DEM.
+
+At runtime each marker follows this path:
+
+```text
+WGS84 lat/lon
+    ↓
+same terrain georeference used by routes
+    ↓
+normalized ViewerEngine model coordinates
+    ↓
+downward raycast onto the real DEM mesh
+    ↓
+small physical lift to prevent z-fighting
+    ↓
+projected HTML marker + occlusion handling
+```
+
+Resolved marker positions are cached, so the application does not raycast the terrain again every frame. Clicking a marker uses the Phase 4 camera state system to focus its real terrain location. Active markers also get a terrain highlight.
+
+The viewer now includes:
+
+- category-coded mountain pins
+- compact **All / Summit / Shelter / Landmark / Hazard / Water / Route** filtering
+- hover labels
+- click-to-focus camera behavior
+- marker detail cards with reference elevation, WGS84 coordinates, description and source label
+- separate safety wording for seasonal water, shelter status and high-altitude hazard context
+- removal of the remaining Empire-specific **Artifacts** and **Timeline** toolbar actions from the active mountain viewer
+
+These markers are contextual visualization, not live conditions or navigation. Shelter status, water availability, hazards, weather, access and rescue information must be checked separately before a climb. Source and safety scope are documented in `HOTSPOT_ATTRIBUTION.md`.
+
 ## Coordinate contract
 
 ```text
@@ -69,7 +114,7 @@ UV  = west→east / south→north
 units = metres before ViewerEngine presentation normalization
 ```
 
-Phase 5 preserves that contract through the ViewerEngine normalization transform, which is why a GPX route and the generated DEM land on the same surface without a second coordinate system.
+Routes and Phase 6 hotspots preserve this same contract through the ViewerEngine normalization transform, so GPX lines, mountain markers and the generated DEM share one geographic frame.
 
 ## Reproducible pipelines
 
@@ -106,7 +151,16 @@ scripts/routes/apply_phase5_engine.py
 .github/workflows/apply-phase5-routes.yml
 ```
 
-The Phase 5 workflow rebuilds the South reference route, applies the terrain-aware ViewerEngine migration, runs the production TypeScript/Vite build, runs ESLint, validates generated route density/source metadata, and publishes the generated route data + engine migration back to `iran-peaks`.
+Mountain markers:
+
+```text
+src/data/peaks/damavand-hotspots.ts
+scripts/hotspots/apply_phase6_code.py
+.github/workflows/apply-phase6-hotspots.yml
+HOTSPOT_ATTRIBUTION.md
+```
+
+The Phase 6 workflow applies the geo-aware marker migration, runs the production TypeScript/Vite build and ESLint, validates marker category coverage and publishes the validated viewer code back to `iran-peaks`.
 
 ## Development
 
@@ -131,12 +185,12 @@ npm run lint
 3. ✅ **Satellite Material & Lighting** — georeferenced Sentinel-2 texture, PBR terrain material and mountain daylight presentation
 4. ✅ **Camera & Cinematic Experience** — intro flight, interruptible cinematic orbit, camera-state synchronization, canonical reset and reduced motion
 5. ✅ **Routes & Mountain Intelligence** — generated South Route, real terrain projection, DEM-derived metrics, route focus/layers and local GPX import
-6. **Hotspots & Peak UI** — summit, shelters, landmarks, hazards and final product UI
+6. ✅ **Hotspots & Peak UI** — WGS84 summit/shelter/landmark/hazard/water/route markers, DEM surface projection, filtering, focus and contextual detail UI
 7. **Production Hardening** — LOD, GPU texture compression/KTX2, caching, mobile GPU handling, dependency audit and tests
 
 ## Attribution
 
-Terrain-source attribution is documented in `TERRAIN_ATTRIBUTION.md`. Satellite-source attribution is documented in `IMAGERY_ATTRIBUTION.md`. Route-source attribution and safety notes are documented in `ROUTE_ATTRIBUTION.md`.
+Terrain-source attribution is documented in `TERRAIN_ATTRIBUTION.md`. Satellite-source attribution is documented in `IMAGERY_ATTRIBUTION.md`. Route-source attribution and safety notes are documented in `ROUTE_ATTRIBUTION.md`. Mountain marker source/safety scope is documented in `HOTSPOT_ATTRIBUTION.md`.
 
 ## Upstream
 
