@@ -40,7 +40,6 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        /* Empire Dwelling Atlas tokens */
         paper: "var(--paper)",
         "paper-deep": "var(--paper-deep)",
         cream: "var(--cream)",
@@ -58,8 +57,8 @@ export default {
         slateblue: "var(--slate-icon)",
       },
       fontFamily: {
-        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['"Estedad Variable"', '"Vazirmatn"', 'Tahoma', 'Arial', 'sans-serif'],
+        sans: ['"Estedad Variable"', '"Vazirmatn"', 'Tahoma', 'Arial', 'sans-serif'],
       },
       borderRadius: {
         xl: "calc(var(--radius) + 4px)",
@@ -70,9 +69,9 @@ export default {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-        card: "0 1px 2px rgb(58 44 34 / 0.04), 0 4px 14px -4px rgb(58 44 34 / 0.08)",
-        lift: "0 2px 6px rgb(58 44 34 / 0.06), 0 12px 32px -8px rgb(58 44 34 / 0.16)",
-        tooltip: "0 2px 8px rgb(58 44 34 / 0.08), 0 10px 28px -6px rgb(58 44 34 / 0.18)",
+        card: "0 1px 2px rgb(46 41 35 / 0.04), 0 4px 14px -4px rgb(46 41 35 / 0.08)",
+        lift: "0 2px 6px rgb(46 41 35 / 0.06), 0 12px 32px -8px rgb(46 41 35 / 0.16)",
+        tooltip: "0 2px 8px rgb(46 41 35 / 0.08), 0 10px 28px -6px rgb(46 41 35 / 0.18)",
       },
       keyframes: {
         "accordion-down": {
