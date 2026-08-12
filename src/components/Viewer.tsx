@@ -1,8 +1,11 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { Empire } from "@/types/empire";
+import type { PeakRoute, RouteDocument, RouteMetrics, TerrainManifestDocument } from "@/types/route";
 import { EMPIRES } from "@/data";
+import { parseGpx } from "@/lib/gpx";
 import { ViewerEngine } from "@/three/engine";
 import { HotspotLayer } from "./HotspotLayer";
+import { RoutePanel } from "./RoutePanel";
 import {
   RotateIcon,
   ZoomInIcon,
@@ -22,22 +25,26 @@ import {
 } from "./icons";
 
 interface ViewerProps {
-  empire: Empire; // the empire the viewer should display
-  onSwap: (e: Empire) => void; // called mid-transition: panels should update
+  empire: Empire;
+  routes: PeakRoute[];
+  terrainManifestPath: string;
+  onSwap: (e: Empire) => void;
   reducedMotion: boolean;
   animating: boolean;
   focusHotspot: string | null;
   onFocusHandled: () => void;
   onArtifacts: () => void;
   onTimeline: () => void;
-  /** hands the parent a way to warm a dwelling before it is picked */
   onPrefetchReady?: (prefetch: (e: Empire) => void) => void;
 }
 
 type ToolMode = "rotate" | "pan";
+type LayerKey = "labels" | "routes" | "grid" | "wire" | "xray";
 
 export const Viewer = memo(function Viewer({
   empire,
+  routes,
+  terrainManifestPath,
   onSwap,
   reducedMotion,
   animating,
@@ -51,6 +58,7 @@ export const Viewer = memo(function Viewer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<ViewerEngine | null>(null);
   const currentEmpireRef = useRef<Empire | null>(null);
+  const builtInRouteRef = useRef<RouteDocument | null>(null);
   const [engineReady, setEngineReady] = useState(false);
   const [markersVisible, setMarkersVisible] = useState(false);
   const [loading, setLoading] = useState<{ name: string; pct: number } | null>(null);
@@ -59,12 +67,16 @@ export const Viewer = memo(function Viewer({
   const [tool, setTool] = useState<ToolMode>("rotate");
   const [layersOpen, setLayersOpen] = useState(false);
   const layersRef = useRef<HTMLDivElement>(null);
-  const [layers, setLayers] = useState({ labels: true, grid: false, wire: false, xray: false });
+  const [layers, setLayers] = useState({ labels: true, routes: true, grid: false, wire: false, xray: false });
   const [tipVisible, setTipVisible] = useState(true);
+  const [routeMetrics, setRouteMetrics] = useState<RouteMetrics | null>(null);
+  const [routeName, setRouteName] = useState(routes[0]?.name ?? "Mountain route");
+  const [routeImported, setRouteImported] = useState(false);
   const requestRef = useRef(0);
   const loadingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeHs = empire.hotspots.find((h) => h.id === activeId) ?? null;
+  const builtInRoute = routes[0] ?? null;
 
   /* ── engine lifecycle ── */
   useEffect(() => {
@@ -101,6 +113,45 @@ export const Viewer = memo(function Viewer({
     engineRef.current?.setPanMode(tool === "pan");
   }, [tool]);
 
+  /* Route metadata and the terrain georeference are small JSON files. The
+     renderer keeps the loaded route as pending data if the GLB is still being
+     prepared, then clamps it to the mesh as soon as the model is presented. */
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engineReady || !engine || !builtInRoute) return;
+    let cancelled = false;
+
+    Promise.all([
+      fetch(terrainManifestPath).then((response) => {
+        if (!response.ok) throw new Error(`Terrain manifest HTTP ${response.status}`);
+        return response.json() as Promise<TerrainManifestDocument>;
+      }),
+      fetch(builtInRoute.dataPath).then((response) => {
+        if (!response.ok) throw new Error(`Route data HTTP ${response.status}`);
+        return response.json() as Promise<RouteDocument>;
+      }),
+    ])
+      .then(([terrain, routeDocument]) => {
+        if (cancelled) return;
+        engine.setTerrainGeoReference({
+          centerLat: terrain.center.lat,
+          centerLon: terrain.center.lon,
+          baseElevationM: terrain.elevation_m.base,
+        });
+        builtInRouteRef.current = routeDocument;
+        const metrics = engine.setGeoRoute(routeDocument.points, builtInRoute.color);
+        engine.setRouteVisible(layers.routes);
+        if (metrics) setRouteMetrics(metrics);
+        setRouteName(builtInRoute.name);
+        setRouteImported(false);
+      })
+      .catch((error) => console.error("route data load failed", error));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [builtInRoute, engineReady, terrainManifestPath]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* dismiss the layers menu on an outside click, or on Escape */
   useEffect(() => {
     if (!layersOpen) return;
@@ -110,8 +161,6 @@ export const Viewer = memo(function Viewer({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setLayersOpen(false);
     };
-    // capture, so the menu closes even when the click lands on the canvas,
-    // which stops propagation for its own orbit handling
     document.addEventListener("pointerdown", onDown, true);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -120,11 +169,7 @@ export const Viewer = memo(function Viewer({
     };
   }, [layersOpen]);
 
-  /* ── empire switching ── */
-  /* Every request gets a token. A newer request supersedes an older one at
-     any point — while its model is still downloading, or mid-animation — so
-     rapid clicking always lands on the last dwelling picked instead of
-     dropping the clicks that arrive during a swap. */
+  /* ── peak switching ── */
   const presentEmpire = useCallback(
     async (next: Empire, opts: { initial?: boolean } = {}) => {
       const engine = engineRef.current;
@@ -136,7 +181,6 @@ export const Viewer = memo(function Viewer({
       setHoverId(null);
       setMarkersVisible(false);
 
-      // loading state if the fetch is slow
       if (loadingTimer.current) clearTimeout(loadingTimer.current);
       loadingTimer.current = setTimeout(() => {
         if (token === requestRef.current) setLoading({ name: next.dwelling, pct: 8 });
@@ -146,27 +190,24 @@ export const Viewer = memo(function Viewer({
         return null;
       });
       if (loadingTimer.current) clearTimeout(loadingTimer.current);
-      if (token !== requestRef.current) return; // a newer pick won while loading
+      if (token !== requestRef.current) return;
       setLoading(null);
       if (!model) return;
 
-      // the engine drives the exchange; panels flip at the handover so copy
-      // and geometry change on the same beat
       await engine.transition(model, next, {
         instant: opts.initial,
         onMidpoint: () => {
           if (token === requestRef.current) onSwap(next);
         },
       });
-      if (token !== requestRef.current) return; // superseded mid-animation
+      if (token !== requestRef.current) return;
 
-      // The first peak arrives through a deliberate flight + short orbit. Any
-      // direct interaction cancels it immediately inside ViewerEngine.
+      const metrics = engine.refreshRoute();
+      if (metrics) setRouteMetrics(metrics);
+
       if (opts.initial) engine.playPeakIntro(next);
-
       setMarkersVisible(true);
 
-      // warm the neighbours so the next pick is already in memory
       const idx = EMPIRES.findIndex((e) => e.id === next.id);
       window.setTimeout(() => {
         if (token !== requestRef.current) return;
@@ -177,14 +218,12 @@ export const Viewer = memo(function Viewer({
     [onSwap],
   );
 
-  /* react to requested empire changes */
   useEffect(() => {
     if (engineReady && currentEmpireRef.current?.id !== empire.id) {
       void presentEmpire(empire);
     }
   }, [empire, engineReady, presentEmpire]);
 
-  /* external hotspot focus (from search) */
   useEffect(() => {
     if (focusHotspot) {
       setActiveId(focusHotspot);
@@ -192,7 +231,6 @@ export const Viewer = memo(function Viewer({
     }
   }, [focusHotspot, onFocusHandled]);
 
-  /* camera + highlight follow the active marker */
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine || !engineReady) return;
@@ -210,19 +248,49 @@ export const Viewer = memo(function Viewer({
     setTool("rotate");
   }, [empire]);
 
+  const importGpx = useCallback(
+    async (file: File) => {
+      const engine = engineRef.current;
+      if (!engine) throw new Error("3D viewer is not ready yet.");
+      const points = parseGpx(await file.text());
+      const metrics = engine.setGeoRoute(points, builtInRoute?.color ?? "#ef5b32");
+      if (!metrics) throw new Error("This GPX does not intersect enough of the current 30 km terrain.");
+      setRouteMetrics(metrics);
+      setRouteName(file.name.replace(/\.gpx$/i, "") || "Imported GPX");
+      setRouteImported(true);
+      setLayers((previous) => ({ ...previous, routes: true }));
+      engine.setRouteVisible(true);
+    },
+    [builtInRoute?.color],
+  );
+
+  const restoreBuiltInRoute = useCallback(() => {
+    const engine = engineRef.current;
+    const document = builtInRouteRef.current;
+    if (!engine || !document || !builtInRoute) return;
+    const metrics = engine.setGeoRoute(document.points, builtInRoute.color);
+    if (metrics) setRouteMetrics(metrics);
+    setRouteName(builtInRoute.name);
+    setRouteImported(false);
+    setLayers((previous) => ({ ...previous, routes: true }));
+    engine.setRouteVisible(true);
+  }, [builtInRoute]);
+
   /* layer toggles */
-  const toggleLayer = (key: "labels" | "grid" | "wire" | "xray") => {
+  const toggleLayer = (key: LayerKey) => {
     const next = { ...layers, [key]: !layers[key] };
     setLayers(next);
     const engine = engineRef.current;
     if (!engine) return;
+    if (key === "routes") engine.setRouteVisible(next.routes);
     if (key === "grid") engine.setGrid(next.grid);
     if (key === "wire") engine.setWireframe(next.wire);
     if (key === "xray") engine.setXray(next.xray);
   };
 
-  const LAYER_ITEMS: { key: "labels" | "grid" | "wire" | "xray"; label: string; icon: typeof GridIcon }[] = [
+  const LAYER_ITEMS: { key: LayerKey; label: string; icon: typeof GridIcon }[] = [
     { key: "labels", label: "Peak markers", icon: EyeIcon },
+    { key: "routes", label: "3D route", icon: LayersIcon },
     { key: "grid", label: "Terrain grid", icon: GridIcon },
     { key: "wire", label: "Wireframe", icon: WireIcon },
     { key: "xray", label: "Terrain x-ray", icon: XrayIcon },
@@ -257,11 +325,8 @@ export const Viewer = memo(function Viewer({
             {empire.imageryAttribution}
           </div>
         )}
-        {/* holds the outgoing frame still while the next dwelling takes its
-            place underneath, so a swap dissolves instead of blinking */}
       </div>
 
-      {/* pins fixed to the dwelling */}
       <HotspotLayer
         engine={engineReady ? engineRef.current : null}
         empire={empire}
@@ -273,9 +338,21 @@ export const Viewer = memo(function Viewer({
         visible={markersVisible && layers.labels}
       />
 
-      {/* ── tool rail ── */}
+      {builtInRoute && (
+        <RoutePanel
+          route={builtInRoute}
+          routeName={routeName}
+          metrics={routeMetrics}
+          visible={layers.routes}
+          imported={routeImported}
+          onToggleVisible={() => toggleLayer("routes")}
+          onFocus={() => engineRef.current?.focusRoute()}
+          onResetBuiltIn={restoreBuiltInRoute}
+          onImportGpx={importGpx}
+        />
+      )}
+
       <div className="absolute left-2 top-1/2 z-30 -translate-y-1/2 md:left-3" role="toolbar" aria-label="Model tools" aria-orientation="vertical">
-        {/* px keeps the active pill clear of the rail's own edges */}
         <div className="atlas-card flex w-[46px] flex-col items-center gap-0.5 !rounded-2xl px-1.5 py-2 sm:w-[58px] md:w-[68px] md:px-2 md:py-2.5">
           <button className={`tool-btn ${tool === "rotate" ? "is-on" : ""}`} onClick={() => setTool("rotate")} aria-pressed={tool === "rotate"}>
             <RotateIcon />
@@ -285,8 +362,6 @@ export const Viewer = memo(function Viewer({
             <PanIcon />
             <span>Pan</span>
           </button>
-          {/* zoom acts on the camera directly rather than arming a mode, so it
-              takes two plain buttons instead of a toggle that hides them */}
           <button className="tool-btn" onClick={() => engineRef.current?.zoomBy(0.78)}>
             <ZoomInIcon />
             <span>Zoom in</span>
@@ -334,7 +409,6 @@ export const Viewer = memo(function Viewer({
         </div>
       </div>
 
-      {/* ── active hotspot detail card ── */}
       {activeHs && (
         <div
           className="atlas-card absolute bottom-4 left-1/2 z-30 w-[min(430px,calc(100%-140px))] -translate-x-1/2 !rounded-2xl p-4"
@@ -347,7 +421,7 @@ export const Viewer = memo(function Viewer({
               <h3 className="font-display mt-0.5 text-[1.25rem] font-bold leading-tight text-ink">{activeHs.title}</h3>
             </div>
             <button className="rounded-md p-1 text-ink-muted transition-colors hover:bg-paper-deep hover:text-ink" onClick={() => setActiveId(null)} aria-label="Close detail">
-              <CloseIcon className="h-4.5 w-4.5 h-[18px] w-[18px]" />
+              <CloseIcon className="h-[18px] w-[18px]" />
             </button>
           </div>
           <p className="font-display mt-2 text-[0.98rem] italic leading-snug text-ink-muted">{activeHs.short}</p>
@@ -355,7 +429,6 @@ export const Viewer = memo(function Viewer({
         </div>
       )}
 
-      {/* ── tip card ── */}
       {tipVisible && !activeHs && (
         <div className="absolute bottom-4 right-4 z-30 hidden w-[210px] rounded-2xl border border-line-strong bg-[#efe4cf] p-3.5 shadow-card md:block">
           <div className="flex items-center justify-between">
@@ -368,12 +441,11 @@ export const Viewer = memo(function Viewer({
             </button>
           </div>
           <p className="font-display mt-1.5 text-[0.88rem] italic leading-snug text-ink-soft">
-            Drag to rotate. Scroll to zoom. Hover a pin on the building to read it.
+            The route is clamped to the DEM. Import a GPX to compare your own track in 3D.
           </p>
         </div>
       )}
 
-      {/* ── loading experience ── */}
       {loading && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-paper/85 backdrop-blur-[2px]" role="status" aria-live="polite">
           <div className="flex w-[240px] flex-col items-center text-center">
@@ -393,7 +465,7 @@ export const Viewer = memo(function Viewer({
             <div className="mt-3 h-[3px] w-full overflow-hidden rounded-full bg-line-warm">
               <div className="h-full rounded-full bg-terracotta transition-all duration-300" style={{ width: `${loading.pct}%` }} />
             </div>
-            <p className="loading-fact font-display mt-3 text-[0.85rem] italic text-ink-muted">Preparing the museum hall…</p>
+            <p className="loading-fact font-display mt-3 text-[0.85rem] italic text-ink-muted">Preparing terrain, imagery and route layers…</p>
           </div>
         </div>
       )}
