@@ -59,6 +59,20 @@ jobs:
                   raise SystemExit('current PeakInfoPanel status anchor not found')
               panel_text = panel_text.replace(old_status, new_status, 1)
           panel.write_text(panel_text)
+
+          viewer = Path('src/components/Viewer.tsx')
+          viewer_text = viewer.read_text()
+          viewer_text = viewer_text.replace('  VaseIcon,\n  TimelineIcon,\n', '')
+          viewer_text = viewer_text.replace('  onArtifacts: () => void;\n  onTimeline: () => void;\n', '')
+          viewer_text = viewer_text.replace(
+              '  onFocusHandled,\n  onArtifacts,\n  onTimeline,\n  onPrefetchReady,',
+              '  onFocusHandled,\n  onPrefetchReady,',
+          )
+          viewer_text = viewer_text.replace(
+              '''          <button className="tool-btn" onClick={onArtifacts}>\n            <VaseIcon />\n            <span>Artifacts</span>\n          </button>\n          <button className="tool-btn" onClick={onTimeline}>\n            <TimelineIcon />\n            <span>Timeline</span>\n          </button>\n''',
+              '',
+          )
+          viewer.write_text(viewer_text)
           PY
 
       - name: Apply geo-aware marker migration
