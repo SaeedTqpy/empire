@@ -70,11 +70,11 @@ export default function App() {
   const handleNav = useCallback((id: string) => setActiveNav(id), []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper">
+    <div className="iranian-shell flex min-h-screen flex-col bg-paper">
       <Header onMenuOpen={() => setMenuOpen(true)} onNav={handleNav} activeNav={activeNav} />
 
-      <div className="flex min-h-[70vh] flex-1 gap-4 px-3 pb-4 pt-3 sm:min-h-[600px] sm:px-4 xl:px-5">
-        <aside className="hidden w-[268px] flex-none xl:flex">
+      <div className="iranian-courtyard-grid flex min-h-[70vh] flex-1 gap-4 px-3 pb-4 pt-4 sm:min-h-[600px] sm:px-4 xl:px-5">
+        <aside className="iranian-side-wing hidden w-[268px] flex-none xl:flex">
           <PeakLibrary
             peaks={PEAKS}
             activeId={viewerPeak.id}
@@ -85,7 +85,7 @@ export default function App() {
           />
         </aside>
 
-        <main className="flex min-w-0 flex-1">
+        <main className="iranian-courtyard-main flex min-w-0 flex-1">
           {legacyRenderer ? (
             <Viewer
               empire={viewerModel}
@@ -107,7 +107,7 @@ export default function App() {
           )}
         </main>
 
-        <aside className="hidden w-[330px] flex-none xl:flex">
+        <aside className="iranian-side-wing hidden w-[330px] flex-none xl:flex">
           <PeakInfoPanel
             peak={panelPeak}
             animating={animating}
@@ -116,7 +116,7 @@ export default function App() {
         </aside>
       </div>
 
-      <section className="px-3 pb-6 sm:px-4 xl:hidden" aria-label="Selected peak">
+      <section className="iranian-mobile-info px-3 pb-6 sm:px-4 xl:hidden" aria-label="Selected peak">
         <PeakInfoPanel
           peak={panelPeak}
           flow
@@ -128,20 +128,20 @@ export default function App() {
       {menuOpen && (
         <div className="overlay-backdrop xl:hidden" onClick={() => setMenuOpen(false)}>
           <div
-            className="flex h-full w-[min(320px,86vw)] flex-col bg-paper shadow-lift"
+            className="iranian-drawer flex h-full w-[min(330px,88vw)] flex-col bg-paper shadow-lift"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-label="Peak menu"
           >
-            <div className="flex flex-none items-center justify-between border-b border-line-warm px-4 py-3">
+            <div className="flex flex-none items-center justify-between border-b border-line-warm px-4 py-4">
               <div>
-                <span className="font-display block text-[1.15rem] font-bold text-ink">Iran 3D Peaks</span>
-                <span className="text-[0.72rem] text-ink-muted">Interactive mountain atlas</span>
+                <span className="iranian-brand-fa block" lang="fa" dir="rtl">قله‌های ایران</span>
+                <span className="iranian-brand-en">Iran 3D Peaks · Mountain Atlas</span>
               </div>
               <button
                 onClick={() => setMenuOpen(false)}
-                className="rounded-lg border border-line-warm p-1.5 text-ink-muted transition-colors hover:text-ink"
+                className="iranian-icon-button border p-2 text-ink-muted transition-colors hover:text-ink"
                 aria-label="Close menu"
               >
                 <CloseIcon className="h-4 w-4" />
