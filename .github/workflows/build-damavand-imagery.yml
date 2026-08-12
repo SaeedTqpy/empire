@@ -54,9 +54,6 @@ jobs:
           pip install -r scripts/terrain/requirements.txt -r scripts/imagery/requirements.txt
           npm ci
 
-      - name: Apply mountain viewer profile
-        run: python scripts/imagery/apply_phase3_code.py
-
       - name: Apply ultra-detail imagery and close-inspection profile
         run: python scripts/imagery/apply_ultra_detail_code.py
 
