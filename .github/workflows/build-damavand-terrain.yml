@@ -1,4 +1,4 @@
-name: Build Damavand Terrain
+name: Validate Damavand Terrain
 
 on:
   workflow_dispatch:
@@ -10,21 +10,20 @@ on:
       - ".github/workflows/build-damavand-terrain.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: damavand-terrain-${{ github.ref }}
+  group: damavand-terrain-validation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-terrain:
+  validate-terrain:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: iran-peaks
-          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -32,12 +31,6 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: scripts/terrain/requirements.txt
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
 
       - name: Cache source DEM tiles
         uses: actions/cache@v4
@@ -50,9 +43,6 @@ jobs:
       - name: Install terrain dependencies
         run: pip install -r scripts/terrain/requirements.txt
 
-      - name: Install project dependencies
-        run: npm ci
-
       - name: Prefetch source DEM tiles
         run: |
           python scripts/terrain/prefetch_tiles.py \
@@ -60,62 +50,24 @@ jobs:
             --cache-dir .terrain-cache \
             --workers 4
 
-      - name: Build raw Damavand terrain
+      - name: Build validation terrain
         run: |
+          mkdir -p .cache/terrain
           python scripts/terrain/build_peak_terrain.py \
             --config scripts/terrain/damavand.json \
-            --output public/models/damavand.raw.glb \
-            --manifest public/models/damavand.terrain.json \
+            --output .cache/terrain/damavand.raw.glb \
+            --manifest .cache/terrain/damavand.terrain.json \
             --cache-dir .terrain-cache
 
-      - name: Validate raw terrain geometry
+      - name: Validate terrain geometry
         run: |
           python scripts/terrain/validate_terrain.py \
-            --model public/models/damavand.raw.glb \
-            --manifest public/models/damavand.terrain.json
+            --model .cache/terrain/damavand.raw.glb \
+            --manifest .cache/terrain/damavand.terrain.json
 
-      - name: Draco-compress terrain
-        run: |
-          npx gltf-transform draco \
-            public/models/damavand.raw.glb \
-            public/models/damavand.glb \
-            --method edgebreaker
-          rm public/models/damavand.raw.glb
+      - name: Report validation model
+        run: ls -lh .cache/terrain/damavand.raw.glb .cache/terrain/damavand.terrain.json
 
-      - name: Inspect final GLB
-        run: npx gltf-transform inspect public/models/damavand.glb
-
-      - name: Report artifact size
-        run: |
-          ls -lh public/models/damavand.glb public/models/damavand.terrain.json
-          test $(stat -c%s public/models/damavand.glb) -gt 100000
-          test $(stat -c%s public/models/damavand.glb) -lt 8000000
-
-      - name: Commit generated terrain
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Generated binaries are intentionally kept outside the worktree
-          # while we fast-forward to the newest branch head. This prevents an
-          # app/data commit that landed during the DEM build from making
-          # `git pull --rebase` fail on unstaged generated files.
-          tmp_dir="$(mktemp -d)"
-          cp public/models/damavand.glb "$tmp_dir/damavand.glb"
-          cp public/models/damavand.terrain.json "$tmp_dir/damavand.terrain.json"
-
-          git fetch origin iran-peaks
-          git reset --hard origin/iran-peaks
-
-          cp "$tmp_dir/damavand.glb" public/models/damavand.glb
-          cp "$tmp_dir/damavand.terrain.json" public/models/damavand.terrain.json
-          rm -rf "$tmp_dir"
-
-          git add public/models/damavand.glb public/models/damavand.terrain.json
-          if git diff --cached --quiet; then
-            echo "Terrain is already up to date."
-            exit 0
-          fi
-          git commit -m "build(terrain): generate real Damavand DEM model"
-          git push origin HEAD:iran-peaks
+      # Canonical /public assets are intentionally NOT published here.
+      # The imagery workflow owns the final textured GLB + matching terrain
+      # manifest so a terrain-only job can never overwrite satellite material.
