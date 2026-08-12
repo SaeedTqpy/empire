@@ -2,7 +2,12 @@ import * as THREE from "three";
 import { TilesRenderer } from "3d-tiles-renderer/three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-import type { TerrainStreamingConfig, TerrainStreamingStats } from "@/types/streaming";
+import type {
+  DetailImageryStatus,
+  TerrainStreamingConfig,
+  TerrainStreamingStats,
+} from "@/types/streaming";
+import { createDamavandVhrOverlay } from "@/three/damavand-vhr-overlay";
 
 interface ResolutionRenderer {
   getPixelRatio(): number;
@@ -10,11 +15,11 @@ interface ResolutionRenderer {
 }
 
 /**
- * Small adapter around NASA/JPL's 3d-tiles-renderer.
+ * Adapter around NASA/JPL's 3d-tiles-renderer.
  *
- * It owns only visual terrain. The ViewerEngine keeps its lightweight hidden
- * interaction mesh for deterministic route/hotspot projection, so spatial LOD
- * can evolve independently from product interaction semantics.
+ * Visual terrain streams independently from the hidden interaction mesh used
+ * by routes/hotspots. Phase 8 optionally registers a runtime-only high-detail
+ * image overlay; the source remains remote and is never bundled into tiles.
  */
 export class TerrainTilesStreamer {
   readonly group: THREE.Group;
@@ -31,6 +36,7 @@ export class TerrainTilesStreamer {
   private wireframe = false;
   private xray = false;
   private lastStatsAt = 0;
+  private detailImageryStatus: DetailImageryStatus = "off";
 
   onStats: ((stats: TerrainStreamingStats) => void) | null = null;
   onFirstVisual: (() => void) | null = null;
@@ -73,6 +79,34 @@ export class TerrainTilesStreamer {
     tiles.manager.addHandler(/\.gltf$/i, gltf);
     tiles.manager.addHandler(/\.glb$/i, gltf);
 
+    const detailConfig = config.detailImagery;
+    const detailDisabled =
+      typeof window !== "undefined" && new URLSearchParams(window.location.search).get("detail") === "0";
+
+    if (detailConfig?.enabled && !detailDisabled) {
+      this.detailImageryStatus = "initializing";
+      try {
+        const { overlay, plugin } = createDamavandVhrOverlay(detailConfig, renderer);
+        tiles.registerPlugin(plugin);
+        void overlay
+          .whenReady()
+          .then(() => {
+            if (this.detailImageryStatus === "initializing") {
+              this.detailImageryStatus = "active";
+              this.emitStats(true);
+            }
+          })
+          .catch((error: unknown) => {
+            console.warn("high-detail imagery initialization failed; keeping Sentinel fallback", error);
+            this.detailImageryStatus = "error";
+            this.emitStats(true);
+          });
+      } catch (error) {
+        console.warn("high-detail imagery plugin unavailable; keeping Sentinel fallback", error);
+        this.detailImageryStatus = "error";
+      }
+    }
+
     tiles.setCamera(camera);
     this.syncResolution();
 
@@ -97,11 +131,22 @@ export class TerrainTilesStreamer {
       this.loadedModels = Math.max(0, this.loadedModels - 1);
       this.emitStats(true);
     });
-    tiles.addEventListener("load-error", ({ error }) => {
+    tiles.addEventListener("load-error", (event) => {
+      // ImageOverlayPlugin adds an `overlay` property to the same event. A VHR
+      // fetch failure must never kill the terrain: the embedded Sentinel-2
+      // material remains a complete visual fallback.
+      const isOverlayError = Object.prototype.hasOwnProperty.call(event, "overlay");
+      if (isOverlayError) {
+        this.detailImageryStatus = "error";
+        console.warn("high-detail imagery tile failed; keeping Sentinel fallback", event.error);
+        this.emitStats(true);
+        return;
+      }
+
       if (!this.firstVisualSeen) {
         this.failed = true;
         this.loading = false;
-        this.onFatalError?.(error);
+        this.onFatalError?.(event.error);
       }
       this.emitStats(true);
     });
@@ -160,6 +205,7 @@ export class TerrainTilesStreamer {
     for (const tile of this.tiles.visibleTiles) {
       visibleDepth = Math.max(visibleDepth, tile.internal.depth);
     }
+    const detail = this.config.detailImagery;
     this.onStats?.({
       mode: this.failed ? "fallback" : "3d-tiles",
       loading: this.loading,
@@ -170,6 +216,9 @@ export class TerrainTilesStreamer {
       visibleDepth,
       maxDepth: this.config.maxDepth,
       failed: this.failed,
+      detailImageryStatus: this.detailImageryStatus,
+      detailImageryLabel: detail?.sourceLabel,
+      detailImageryResolutionM: detail?.sampledResolutionM,
     });
   }
 
