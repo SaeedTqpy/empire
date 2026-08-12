@@ -29,10 +29,11 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Prime Phase 5 Damavand dataset for markers
+      - name: Prime Phase 5 files for marker migration
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
           p = Path('src/data/peaks/damavand.ts')
           text = p.read_text()
           if 'import { damavandHotspots } from "./damavand-hotspots";' not in text:
@@ -48,6 +49,16 @@ jobs:
                   raise SystemExit('current Damavand hotspot anchor not found')
               text = text.replace(old, new, 1)
           p.write_text(text)
+
+          panel = Path('src/components/PeakInfoPanel.tsx')
+          panel_text = panel.read_text()
+          old_status = 'Real DEM · Sentinel-2 · cinematic camera · terrain-aware 3D routes.'
+          new_status = 'Real terrain + Sentinel-2 · cinematic camera · 3D routes · geo-aware mountain markers.'
+          if new_status not in panel_text:
+              if old_status not in panel_text:
+                  raise SystemExit('current PeakInfoPanel status anchor not found')
+              panel_text = panel_text.replace(old_status, new_status, 1)
+          panel.write_text(panel_text)
           PY
 
       - name: Apply geo-aware marker migration
