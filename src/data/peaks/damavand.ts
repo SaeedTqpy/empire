@@ -4,9 +4,10 @@ import { damavandHotspots } from "./damavand-hotspots";
 /**
  * Damavand is the reference peak for the terrain + imagery + route pipeline.
  *
- * Phase 2 created the real 30×30 km DEM mesh. Phase 3 added georeferenced
- * Sentinel-2 true-colour imagery. Phase 5 projects climbing routes against the
- * exact same terrain coordinate contract.
+ * The self-hosted terrain remains SRTM-derived and the complete visual fallback
+ * remains Sentinel-2. Phase 8 adds a runtime-only VHR drape over the validated
+ * Vantor/Esri footprint around the summit and south side; it does not pretend
+ * that the underlying elevation model is sub-meter geometry.
  */
 export const damavand: Peak = {
   id: "damavand",
@@ -14,7 +15,7 @@ export const damavand: Peak = {
   localName: "دماوند",
   subtitle: "Iran's highest mountain",
   description:
-    "Explore Mount Damavand as a real 30 km terrain model with Sentinel-2 imagery, 3D climbing routes and terrain-aware mountain intelligence.",
+    "Explore Mount Damavand as a real 30 km terrain model with streamed high-detail summit imagery, 3D climbing routes and terrain-aware mountain intelligence.",
 
   elevationM: 5610,
   prominenceM: 4667,
@@ -42,9 +43,28 @@ export const damavand: Peak = {
       enabled: true,
       tilesetPath: "/tiles/damavand/phase7-v1/tileset.json",
       interactionModelPath: "/tiles/damavand/phase7-v1/interaction.glb",
-      datasetVersion: "phase7-v1",
+      datasetVersion: "phase8-vhr-wayback-20260326",
       targetSSE: 2.5,
       maxDepth: 2,
+      detailImagery: {
+        enabled: true,
+        provider: "esri-wayback",
+        itemId: "b4c5c1b59c4141c5b503335b5baa2df4",
+        tileTemplate:
+          "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/22869/{level}/{row}/{col}",
+        maxZoom: 18,
+        observedResolutionM: 0.34,
+        sampledResolutionM: 0.6,
+        sourceDate: "2025-06-22",
+        sourceLabel: "Vantor Vivid · Esri Wayback 2026-03-26",
+        attribution: "Esri, Vantor, Earthstar Geographics, and the GIS User Community",
+        // Exact WGS84 bounds of metadata feature OBJECTID 3154394. The source
+        // itself is an irregular polygon; this bounds gate prevents high-zoom
+        // requests outside the validated summit/south-side source block.
+        coverageBboxWgs84: [52.0312477, 35.6338357, 52.1723191, 35.958038],
+        centerLat: 35.9513,
+        centerLon: 52.1097,
+      },
     },
   },
   tint: "#6f91a4",
@@ -60,7 +80,7 @@ export const damavand: Peak = {
     { label: "Mountain range", value: "Alborz", icon: "range" },
     { label: "Location", value: "Mazandaran, Iran", icon: "location" },
     { label: "Terrain", value: "30 km real DEM", icon: "type" },
-    { label: "Routes", value: "3D + GPX import", icon: "status" },
+    { label: "Detail imagery", value: "0.6 m summit coverage", icon: "status" },
   ],
 
   // Phase 6 markers use WGS84 coordinates and are raycast onto the DEM.
@@ -89,5 +109,5 @@ export const damavand: Peak = {
     hero: "/img/peaks/damavand-sentinel.webp?v=extreme1025-4k-20260812",
   },
 
-  keywords: ["damavand", "دماوند", "iran", "alborz", "mountain", "volcano", "peak", "terrain", "dem", "sentinel-2", "gpx", "route"],
+  keywords: ["damavand", "دماوند", "iran", "alborz", "mountain", "volcano", "peak", "terrain", "dem", "sentinel-2", "vhr", "vantor", "gpx", "route"],
 };
