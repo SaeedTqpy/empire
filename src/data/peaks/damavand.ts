@@ -77,8 +77,8 @@ export const damavand: Peak = {
   ],
 
   media: {
-    thumbnail: "/img/peaks/damavand-sentinel.webp?v=phase3-sentinel-20260812",
-    hero: "/img/peaks/damavand-sentinel.webp?v=phase3-sentinel-20260812",
+    thumbnail: "/img/peaks/damavand-sentinel.webp?v=ultra4k-sentinel-20260812",
+    hero: "/img/peaks/damavand-sentinel.webp?v=ultra4k-sentinel-20260812",
   },
 
   keywords: ["damavand", "دماوند", "iran", "alborz", "mountain", "volcano", "peak", "terrain", "dem", "sentinel-2", "gpx", "route"],
