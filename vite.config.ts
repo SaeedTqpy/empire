@@ -11,6 +11,12 @@ export default defineConfig({
     port: 3000,
     host: true,
   },
+  optimizeDeps: {
+    // MapLibre GL JS v6 ships an ESM worker as a sibling module. Let Vite's
+    // worker pipeline handle it explicitly instead of pre-bundling the
+    // package into .vite/deps, where the worker sibling can go missing.
+    exclude: ["maplibre-gl"],
+  },
   build: {
     chunkSizeWarningLimit: 900,
     rollupOptions: {
