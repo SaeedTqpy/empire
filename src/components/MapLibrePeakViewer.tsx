@@ -251,8 +251,6 @@ export const MapLibrePeakViewer = memo(function MapLibrePeakViewer({
     let map: MapLibreMap | null = null;
 
     const start = async () => {
-      setStatus("loading");
-      setErrorText("");
       try {
         const manifestResponse = await fetch(`/tiles/maplibre/${peak.id}/manifest.json`, { cache: "no-cache" });
         if (!manifestResponse.ok) throw new Error(`Local terrain manifest HTTP ${manifestResponse.status}`);
