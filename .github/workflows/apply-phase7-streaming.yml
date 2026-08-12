@@ -1,0 +1,168 @@
+name: Build Phase 7 Damavand Streaming
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - phase7-streaming-build
+    paths:
+      - "scripts/streaming/**"
+      - ".github/workflows/apply-phase7-streaming.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase7-damavand-streaming-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-streaming:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: phase7-streaming-build
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            scripts/terrain/requirements.txt
+            scripts/imagery/requirements.txt
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Cache source DEM tiles
+        uses: actions/cache@v4
+        with:
+          path: .terrain-cache
+          key: phase7-damavand-skadi-${{ runner.os }}-${{ hashFiles('scripts/terrain/damavand.json') }}
+          restore-keys: |
+            phase7-damavand-skadi-${{ runner.os }}-
+            damavand-skadi-${{ runner.os }}-
+
+      - name: Install build dependencies
+        run: |
+          pip install -r scripts/terrain/requirements.txt -r scripts/imagery/requirements.txt
+          npm ci
+          npm install --save-exact 3d-tiles-renderer@0.5.0
+
+      - name: Apply Phase 7 runtime migration
+        run: python scripts/streaming/apply_phase7_code.py
+
+      - name: Prefetch source DEM tiles
+        run: |
+          python scripts/terrain/prefetch_tiles.py \
+            --config scripts/terrain/damavand.json \
+            --cache-dir .terrain-cache \
+            --workers 4
+
+      - name: Build lossless 4K imagery master
+        run: |
+          mkdir -p .cache/streaming
+          python scripts/imagery/build_sentinel_texture.py \
+            --config scripts/imagery/damavand.json \
+            --texture .cache/streaming/damavand-sentinel.png \
+            --preview .cache/streaming/damavand-preview.webp \
+            --manifest .cache/streaming/damavand-imagery.json
+
+      - name: Build spatial 3D Tiles quadtree
+        run: |
+          python scripts/streaming/build_damavand_quadtree.py \
+            --terrain-config scripts/terrain/damavand.json \
+            --master-texture .cache/streaming/damavand-sentinel.png \
+            --cache-dir .terrain-cache \
+            --work-dir .cache/streaming/build \
+            --output-dir public/tiles/damavand/phase7-v1
+
+      - name: Validate spatial hierarchy
+        run: |
+          python scripts/streaming/validate_streaming.py \
+            --tileset public/tiles/damavand/phase7-v1/tileset.json \
+            --manifest public/tiles/damavand/phase7-v1/streaming.manifest.json \
+            --interaction public/tiles/damavand/phase7-v1/interaction.glb
+
+      - name: Inspect representative assets
+        run: |
+          npx gltf-transform inspect public/tiles/damavand/phase7-v1/interaction.glb
+          npx gltf-transform inspect public/tiles/damavand/phase7-v1/l2/r1_c1.glb
+          find public/tiles/damavand/phase7-v1 -type f -maxdepth 3 -print0 | xargs -0 ls -lh
+          du -sh public/tiles/damavand/phase7-v1
+
+      - name: Build application
+        run: npm run build
+
+      - name: Lint application
+        run: npm run lint
+
+      - name: Publish validated Phase 7 dataset and runtime
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          tmp_dir="$(mktemp -d)"
+          mkdir -p \
+            "$tmp_dir/src/types" \
+            "$tmp_dir/src/lib" \
+            "$tmp_dir/src/data/peaks" \
+            "$tmp_dir/src/three" \
+            "$tmp_dir/src/components" \
+            "$tmp_dir/public/tiles/damavand"
+
+          cp package.json "$tmp_dir/package.json"
+          cp package-lock.json "$tmp_dir/package-lock.json"
+          cp src/types/streaming.ts "$tmp_dir/src/types/streaming.ts"
+          cp src/types/peak.ts "$tmp_dir/src/types/peak.ts"
+          cp src/types/empire.ts "$tmp_dir/src/types/empire.ts"
+          cp src/lib/peak-viewer-adapter.ts "$tmp_dir/src/lib/peak-viewer-adapter.ts"
+          cp src/data/peaks/damavand.ts "$tmp_dir/src/data/peaks/damavand.ts"
+          cp src/three/terrain-streaming.ts "$tmp_dir/src/three/terrain-streaming.ts"
+          cp src/three/engine.ts "$tmp_dir/src/three/engine.ts"
+          cp src/components/Viewer.tsx "$tmp_dir/src/components/Viewer.tsx"
+          cp src/terrain.css "$tmp_dir/src/terrain.css"
+          cp -R public/tiles/damavand/phase7-v1 "$tmp_dir/public/tiles/damavand/phase7-v1"
+
+          git fetch origin phase7-streaming-build
+          git reset --hard origin/phase7-streaming-build
+
+          cp "$tmp_dir/package.json" package.json
+          cp "$tmp_dir/package-lock.json" package-lock.json
+          cp "$tmp_dir/src/types/streaming.ts" src/types/streaming.ts
+          cp "$tmp_dir/src/types/peak.ts" src/types/peak.ts
+          cp "$tmp_dir/src/types/empire.ts" src/types/empire.ts
+          cp "$tmp_dir/src/lib/peak-viewer-adapter.ts" src/lib/peak-viewer-adapter.ts
+          cp "$tmp_dir/src/data/peaks/damavand.ts" src/data/peaks/damavand.ts
+          cp "$tmp_dir/src/three/terrain-streaming.ts" src/three/terrain-streaming.ts
+          cp "$tmp_dir/src/three/engine.ts" src/three/engine.ts
+          cp "$tmp_dir/src/components/Viewer.tsx" src/components/Viewer.tsx
+          cp "$tmp_dir/src/terrain.css" src/terrain.css
+          rm -rf public/tiles/damavand/phase7-v1
+          mkdir -p public/tiles/damavand
+          cp -R "$tmp_dir/public/tiles/damavand/phase7-v1" public/tiles/damavand/phase7-v1
+          rm -rf "$tmp_dir"
+
+          git add \
+            package.json package-lock.json \
+            src/types/streaming.ts src/types/peak.ts src/types/empire.ts \
+            src/lib/peak-viewer-adapter.ts src/data/peaks/damavand.ts \
+            src/three/terrain-streaming.ts src/three/engine.ts \
+            src/components/Viewer.tsx src/terrain.css \
+            public/tiles/damavand/phase7-v1
+
+          if git diff --cached --quiet; then
+            echo "Phase 7 streaming output is already up to date."
+            exit 0
+          fi
+
+          git commit -m "feat(streaming): add Damavand 3D Tiles LOD foundation"
+          git push origin HEAD:phase7-streaming-build
