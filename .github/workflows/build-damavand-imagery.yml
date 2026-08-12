@@ -57,6 +57,9 @@ jobs:
       - name: Apply mountain viewer profile
         run: python scripts/imagery/apply_phase3_code.py
 
+      - name: Apply ultra-detail imagery and close-inspection profile
+        run: python scripts/imagery/apply_ultra_detail_code.py
+
       - name: Prefetch source DEM tiles
         run: |
           python scripts/terrain/prefetch_tiles.py \
@@ -76,52 +79,59 @@ jobs:
             --model .cache/imagery/damavand.raw.glb \
             --manifest .cache/imagery/damavand.terrain.json
 
-      - name: Build Sentinel-2 true-colour texture
+      - name: Build 4K Sentinel-2 native-detail texture
         run: |
           python scripts/imagery/build_sentinel_texture.py \
             --config scripts/imagery/damavand.json \
-            --texture .cache/imagery/damavand-sentinel.jpg \
+            --texture .cache/imagery/damavand-sentinel.png \
             --preview public/img/peaks/damavand-sentinel.webp \
             --manifest public/models/damavand.imagery.json
 
-      - name: Author satellite PBR material
+      - name: Author satellite PBR material from lossless master
         run: |
           python scripts/imagery/embed_texture.py \
             --model .cache/imagery/damavand.raw.glb \
-            --texture .cache/imagery/damavand-sentinel.jpg \
+            --texture .cache/imagery/damavand-sentinel.png \
             --output .cache/imagery/damavand-textured.raw.glb
 
-      - name: Compress satellite texture and geometry
+      - name: Compress 4K satellite texture and geometry
         run: |
-          # Texture transforms decode Draco geometry, so encode WebP first and
-          # apply Draco last. The final GLB therefore retains both extensions.
+          # Keep the authoring master lossless. WebP is applied exactly once at
+          # high quality, before Draco, so the final GLB retains both extensions.
           npx gltf-transform webp \
             .cache/imagery/damavand-textured.raw.glb \
             .cache/imagery/damavand-webp.raw.glb \
-            --slots "baseColor"
+            --slots "baseColor" \
+            --quality 95
 
           npx gltf-transform draco \
             .cache/imagery/damavand-webp.raw.glb \
             public/models/damavand.glb \
             --method edgebreaker
 
-      - name: Inspect and size-gate final assets
+      - name: Inspect and quality-gate final assets
         run: |
           npx gltf-transform inspect public/models/damavand.glb
           ls -lh public/models/damavand.glb public/models/damavand.imagery.json public/img/peaks/damavand-sentinel.webp
-          test $(stat -c%s public/models/damavand.glb) -gt 500000
-          test $(stat -c%s public/models/damavand.glb) -lt 8000000
-          test $(stat -c%s public/img/peaks/damavand-sentinel.webp) -gt 30000
+          test $(stat -c%s public/models/damavand.glb) -gt 1000000
+          test $(stat -c%s public/models/damavand.glb) -lt 25000000
+          test $(stat -c%s public/img/peaks/damavand-sentinel.webp) -gt 50000
           python - <<'PY'
           import json
           from pathlib import Path
           m = json.loads(Path('public/models/damavand.imagery.json').read_text())
           assert m['peak_id'] == 'damavand'
           assert m['texture']['coverage_percent'] >= 97
-          assert m['texture']['width'] == 2048
+          assert m['texture']['width'] == 4096
+          assert m['texture']['height'] == 4096
+          assert m['texture']['master_format'] == 'image/png'
+          assert m['texture']['embedded_format'] == 'image/webp'
+          assert m['texture']['webp_quality'] == 95
+          assert m['texture']['ground_resolution_m_approx'] <= 7.5
+          assert m['source']['native_ground_resolution_m'] == 10
           assert m['attribution'].startswith('Contains modified Copernicus Sentinel data')
           assert len(m['scenes']) >= 1
-          print('imagery manifest validation OK')
+          print('4K native-detail imagery manifest validation OK')
           PY
 
       - name: Build application
@@ -130,16 +140,24 @@ jobs:
       - name: Lint application
         run: npm run lint
 
-      - name: Publish Phase 3 assets and viewer profile
+      - name: Publish ultra-detail assets and viewer profile
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           tmp_dir="$(mktemp -d)"
-          mkdir -p "$tmp_dir/src/three" "$tmp_dir/src/components" "$tmp_dir/public/models" "$tmp_dir/public/img/peaks"
+          mkdir -p \
+            "$tmp_dir/src/three" \
+            "$tmp_dir/src/data/peaks" \
+            "$tmp_dir/src/components" \
+            "$tmp_dir/scripts/imagery" \
+            "$tmp_dir/public/models" \
+            "$tmp_dir/public/img/peaks"
           cp src/three/engine.ts "$tmp_dir/src/three/engine.ts"
+          cp src/data/peaks/damavand.ts "$tmp_dir/src/data/peaks/damavand.ts"
           cp src/components/Viewer.tsx "$tmp_dir/src/components/Viewer.tsx"
+          cp scripts/imagery/build_sentinel_texture.py "$tmp_dir/scripts/imagery/build_sentinel_texture.py"
           cp public/models/damavand.glb "$tmp_dir/public/models/damavand.glb"
           cp public/models/damavand.imagery.json "$tmp_dir/public/models/damavand.imagery.json"
           cp public/img/peaks/damavand-sentinel.webp "$tmp_dir/public/img/peaks/damavand-sentinel.webp"
@@ -148,7 +166,9 @@ jobs:
           git reset --hard origin/iran-peaks
 
           cp "$tmp_dir/src/three/engine.ts" src/three/engine.ts
+          cp "$tmp_dir/src/data/peaks/damavand.ts" src/data/peaks/damavand.ts
           cp "$tmp_dir/src/components/Viewer.tsx" src/components/Viewer.tsx
+          cp "$tmp_dir/scripts/imagery/build_sentinel_texture.py" scripts/imagery/build_sentinel_texture.py
           cp "$tmp_dir/public/models/damavand.glb" public/models/damavand.glb
           cp "$tmp_dir/public/models/damavand.imagery.json" public/models/damavand.imagery.json
           cp "$tmp_dir/public/img/peaks/damavand-sentinel.webp" public/img/peaks/damavand-sentinel.webp
@@ -156,14 +176,16 @@ jobs:
 
           git add \
             src/three/engine.ts \
+            src/data/peaks/damavand.ts \
             src/components/Viewer.tsx \
+            scripts/imagery/build_sentinel_texture.py \
             public/models/damavand.glb \
             public/models/damavand.imagery.json \
             public/img/peaks/damavand-sentinel.webp
 
           if git diff --cached --quiet; then
-            echo "Phase 3 assets are already up to date."
+            echo "Ultra-detail imagery assets are already up to date."
             exit 0
           fi
-          git commit -m "build(imagery): publish Damavand Sentinel-2 material"
+          git commit -m "build(imagery): publish Damavand ultra-detail 4K material"
           git push origin HEAD:iran-peaks
