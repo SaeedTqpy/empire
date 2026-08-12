@@ -5,6 +5,15 @@ on:
     branches: [iran-peaks]
     paths:
       - scripts/routes/**
+      - src/types/route.ts
+      - src/types/peak.ts
+      - src/lib/gpx.ts
+      - src/components/RoutePanel.tsx
+      - src/components/Viewer.tsx
+      - src/data/peaks/damavand.ts
+      - src/App.tsx
+      - src/routes.css
+      - src/main.tsx
       - .github/workflows/apply-phase5-routes.yml
   workflow_dispatch:
 
