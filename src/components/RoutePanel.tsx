@@ -31,8 +31,11 @@ export const RoutePanel = memo(function RoutePanel({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const distance = route?.referenceMetrics?.distanceKm ?? metrics?.distanceKm;
-  const ascent = route?.referenceMetrics?.ascentM ?? metrics?.ascentM;
+  // Built-in routes can expose familiar published headline numbers while the
+  // DEM-derived high point comes from the actual rendered surface. Imported
+  // GPX files must always show their own computed metrics.
+  const distance = imported ? metrics?.distanceKm : (route?.referenceMetrics?.distanceKm ?? metrics?.distanceKm);
+  const ascent = imported ? metrics?.ascentM : (route?.referenceMetrics?.ascentM ?? metrics?.ascentM);
 
   const pickFile = async (file: File | undefined) => {
     if (!file) return;
