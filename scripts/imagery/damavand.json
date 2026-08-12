@@ -10,14 +10,16 @@
     "datetime": "2026-06-01T00:00:00Z/2026-08-12T23:59:59Z",
     "max_cloud_cover": 20,
     "max_candidates": 40,
+    "native_ground_resolution_m": 10,
     "attribution": "Contains modified Copernicus Sentinel data 2026"
   },
   "output": {
-    "width": 2048,
-    "height": 2048,
-    "jpeg_quality": 90,
-    "preview_width": 720,
-    "preview_quality": 86
+    "width": 4096,
+    "height": 4096,
+    "master_format": "png",
+    "webp_quality": 95,
+    "preview_width": 1024,
+    "preview_quality": 90
   },
   "color": {
     "gain": 2.65,
