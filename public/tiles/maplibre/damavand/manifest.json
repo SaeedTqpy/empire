@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "peak_id": "damavand",
+  "bounds": [
+    51.94305968192662,
+    35.81640194544132,
+    52.27634031807337,
+    36.086198054558686
+  ],
+  "tile_size": 512,
+  "min_zoom": 8,
+  "max_zoom": 14,
+  "satellite": {
+    "tile_template": "/tiles/maplibre/damavand/satellite/{z}/{x}/{y}.webp",
+    "format": "image/webp",
+    "attribution": "Contains modified Copernicus Sentinel data 2026",
+    "source_native_resolution_m": 10,
+    "source": "Copernicus Sentinel-2",
+    "detail_policy": "native source detail; no synthetic super-resolution"
+  },
+  "terrain": {
+    "tile_template": "/tiles/maplibre/damavand/dem/{z}/{x}/{y}.png",
+    "format": "image/png",
+    "encoding": "terrarium",
+    "attribution": "SRTM terrain data courtesy of the U.S. Geological Survey; tiles distributed through the AWS Open Data Terrain Tiles dataset.",
+    "source_native_resolution_m": 30,
+    "source": "Skadi / SRTM 1 arc-second",
+    "edge_policy": "XYZ pixels outside the declared 30 km bbox are clamped to the nearest bbox edge; source bounds define the observed terrain extent."
+  },
+  "presentation": {
+    "terrain_exaggeration": 1.22,
+    "max_pitch": 85,
+    "default_zoom": 12.7,
+    "default_pitch": 78,
+    "default_bearing": -34
+  },
+  "generated": {
+    "satellite_tiles": 414,
+    "dem_tiles": 414,
+    "zoom_counts": {
+      "8": {
+        "satellite": 2,
+        "dem": 2
+      },
+      "9": {
+        "satellite": 4,
+        "dem": 4
+      },
+      "10": {
+        "satellite": 4,
+        "dem": 4
+      },
+      "11": {
+        "satellite": 9,
+        "dem": 9
+      },
+      "12": {
+        "satellite": 25,
+        "dem": 25
+      },
+      "13": {
+        "satellite": 81,
+        "dem": 81
+      },
+      "14": {
+        "satellite": 289,
+        "dem": 289
+      }
+    },
+    "asset_bytes_before_manifest": 131442090,
+    "source_dem_tiles": [
+      {
+        "tile": "N35E051",
+        "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N35/N35E051.hgt.gz",
+        "samples_per_side": 3601
+      },
+      {
+        "tile": "N35E052",
+        "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N35/N35E052.hgt.gz",
+        "samples_per_side": 3601
+      },
+      {
+        "tile": "N36E051",
+        "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N36/N36E051.hgt.gz",
+        "samples_per_side": 3601
+      },
+      {
+        "tile": "N36E052",
+        "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N36/N36E052.hgt.gz",
+        "samples_per_side": 3601
+      }
+    ]
+  },
+  "runtime_policy": {
+    "api_key_required": false,
+    "external_runtime_tile_requests": false,
+    "renderer": "MapLibre GL JS native raster terrain"
+  }
+}
