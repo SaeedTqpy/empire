@@ -1,0 +1,71 @@
+name: Apply Phase 4 Camera
+
+on:
+  push:
+    branches: [iran-peaks]
+    paths:
+      - scripts/camera/apply_phase4_code.py
+      - .github/workflows/apply-phase4-camera.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-camera:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: iran-peaks
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply cinematic camera patch
+        run: python scripts/camera/apply_phase4_code.py
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Publish Phase 4 camera code
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          tmp_dir="$(mktemp -d)"
+          mkdir -p "$tmp_dir/src/three" "$tmp_dir/src/components" "$tmp_dir/src/types"
+          cp src/three/engine.ts "$tmp_dir/src/three/engine.ts"
+          cp src/components/Viewer.tsx "$tmp_dir/src/components/Viewer.tsx"
+          cp src/components/PeakInfoPanel.tsx "$tmp_dir/src/components/PeakInfoPanel.tsx"
+          cp src/types/viewer-camera.ts "$tmp_dir/src/types/viewer-camera.ts"
+
+          git fetch origin iran-peaks
+          git reset --hard origin/iran-peaks
+
+          cp "$tmp_dir/src/three/engine.ts" src/three/engine.ts
+          cp "$tmp_dir/src/components/Viewer.tsx" src/components/Viewer.tsx
+          cp "$tmp_dir/src/components/PeakInfoPanel.tsx" src/components/PeakInfoPanel.tsx
+          cp "$tmp_dir/src/types/viewer-camera.ts" src/types/viewer-camera.ts
+          rm -rf "$tmp_dir"
+
+          git add src/three/engine.ts src/components/Viewer.tsx src/components/PeakInfoPanel.tsx src/types/viewer-camera.ts
+          if git diff --cached --quiet; then
+            echo "Phase 4 camera code is already up to date."
+            exit 0
+          fi
+
+          git commit -m "feat(camera): add Damavand cinematic camera experience"
+          git push origin HEAD:iran-peaks
