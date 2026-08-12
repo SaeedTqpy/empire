@@ -1,0 +1,225 @@
+.maplibre-viewer {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(238, 244, 246, 0.9), transparent 42%),
+    linear-gradient(180deg, #aebcc1 0%, #d8dddc 52%, #9da7a3 100%);
+}
+
+.maplibre-viewer .maplibregl-canvas {
+  outline: none;
+}
+
+.maplibre-viewer .maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 12px;
+  background: rgba(24, 29, 29, 0.72);
+  box-shadow: 0 6px 18px rgba(18, 21, 21, 0.2);
+  backdrop-filter: blur(12px);
+}
+
+.maplibre-viewer .maplibregl-ctrl-group button {
+  filter: invert(1) brightness(1.18);
+}
+
+.maplibre-viewer .maplibregl-ctrl-scale {
+  border-color: rgba(255, 255, 255, 0.82);
+  border-top: 0;
+  color: white;
+  background: rgba(19, 23, 23, 0.58);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.maplibre-viewer .maplibregl-ctrl-attrib {
+  color: rgba(30, 35, 35, 0.86);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(9px);
+}
+
+.maplibre-quality-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(72%, 520px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: rgba(20, 25, 25, 0.7);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 0.72rem;
+  letter-spacing: 0.015em;
+  box-shadow: 0 8px 24px rgba(13, 17, 17, 0.16);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.maplibre-quality-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 999px;
+  background: #63dda4;
+  box-shadow: 0 0 0 3px rgba(99, 221, 164, 0.14);
+}
+
+.maplibre-quality-dot.is-error {
+  background: #ff8070;
+  box-shadow: 0 0 0 3px rgba(255, 128, 112, 0.14);
+}
+
+.maplibre-viewer-tools {
+  position: absolute;
+  z-index: 4;
+  left: 14px;
+  bottom: 42px;
+  display: flex;
+  max-width: calc(100% - 28px);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 14px;
+  padding: 7px;
+  background: rgba(20, 25, 25, 0.68);
+  box-shadow: 0 8px 24px rgba(13, 17, 17, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.maplibre-viewer-tools button,
+.maplibre-legacy-link {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  padding: 6px 9px;
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 0.72rem;
+  line-height: 1;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.maplibre-viewer-tools button:hover,
+.maplibre-legacy-link:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.maplibre-route-name {
+  max-width: 180px;
+  overflow: hidden;
+  padding-inline: 4px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maplibre-legacy-link {
+  position: absolute;
+  z-index: 4;
+  right: 12px;
+  bottom: 42px;
+  text-decoration: none;
+  background: rgba(20, 25, 25, 0.62);
+  backdrop-filter: blur(10px);
+}
+
+.maplibre-viewer-error {
+  position: absolute;
+  z-index: 5;
+  top: 54px;
+  left: 14px;
+  max-width: min(420px, calc(100% - 28px));
+  border: 1px solid rgba(255, 163, 148, 0.36);
+  border-radius: 12px;
+  padding: 9px 12px;
+  background: rgba(48, 24, 22, 0.82);
+  color: #ffe8e3;
+  font-size: 0.76rem;
+  box-shadow: 0 8px 24px rgba(15, 8, 8, 0.16);
+  backdrop-filter: blur(10px);
+}
+
+.maplibre-peak-marker {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  background: #f0b54d;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.42), 0 0 0 3px rgba(0, 0, 0, 0.12);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.maplibre-peak-marker:hover,
+.maplibre-peak-marker:focus-visible {
+  transform: scale(1.28);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.18);
+}
+
+.maplibre-peak-marker--summit { background: #f6c954; }
+.maplibre-peak-marker--shelter { background: #56a3d7; }
+.maplibre-peak-marker--landmark { background: #9c78d4; }
+.maplibre-peak-marker--hazard { background: #e75e54; }
+.maplibre-peak-marker--water { background: #46b8c8; }
+.maplibre-peak-marker--route { background: #e58545; }
+
+.maplibre-popup-content {
+  display: grid;
+  gap: 5px;
+  min-width: 190px;
+  color: #232a29;
+}
+
+.maplibre-popup-kicker {
+  color: #707a78;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.maplibre-popup-content strong {
+  font-size: 0.92rem;
+}
+
+.maplibre-popup-content p {
+  margin: 0;
+  color: #4f5957;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.maplibre-popup-elevation {
+  color: #7d5c24;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.maplibre-viewer .maplibregl-popup-content {
+  border-radius: 12px;
+  padding: 12px 13px;
+  box-shadow: 0 10px 28px rgba(22, 28, 27, 0.2);
+}
+
+@media (max-width: 640px) {
+  .maplibre-quality-badge {
+    top: 10px;
+    left: 10px;
+    max-width: calc(100% - 88px);
+    font-size: 0.66rem;
+  }
+
+  .maplibre-viewer-tools {
+    left: 10px;
+    bottom: 40px;
+    max-width: calc(100% - 20px);
+  }
+
+  .maplibre-route-name,
+  .maplibre-legacy-link {
+    display: none;
+  }
+}
