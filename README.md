@@ -4,39 +4,42 @@ Interactive 3D mountain atlas for Iran, starting with **Mount Damavand**.
 
 The product direction is a real-terrain experience: DEM-derived mountain geometry, satellite imagery, cinematic camera movement, climbing routes, shelters and mountain landmarks.
 
-## Current status — Phase 6 complete + ultra-detail imagery profile
+## Current status — Phase 6 complete + extreme-detail terrain/imagery profile
 
-Damavand now combines real terrain, georeferenced satellite imagery, an interruptible cinematic camera, terrain-aware 3D climbing routes, geo-aware mountain markers, and a close-inspection 4K satellite presentation profile.
+Damavand now combines real terrain, georeferenced satellite imagery, an interruptible cinematic camera, terrain-aware 3D climbing routes, geo-aware mountain markers, a 4K satellite material, and an extreme close-inspection terrain profile.
 
-### Real terrain
+### Extreme-detail real terrain
 
 - `Peak` is the product domain model under `src/types/peak.ts`
 - Damavand is the only product dataset rendered at runtime
 - represented area: **30 × 30 km** around the summit
 - source DEM: public Skadi/SRTM, four 3601 × 3601 HGT tiles
-- generated terrain: **513 × 513 samples / 263,169 vertices / 524,288 terrain triangles**
-- terrain skirt: **4,096 triangles**
+- generated terrain: **1025 × 1025 samples / 1,050,625 vertices / 2,097,152 terrain triangles**
+- horizontal output spacing: roughly **29.3 m** across the 30 km footprint
+- terrain skirt: **8,192 triangles**
 - vertical proportion: **1:1 physical scale**, no elevation exaggeration
-- sampled elevation inside the model: roughly **880 m to 5,595 m**
+- sampled elevation inside the current build: roughly **877 m to 5,599 m**
+
+The 1025 grid replaces the earlier 513 grid. This is a real geometry upgrade: the viewer no longer relies on a ~58 m terrain grid when the source DEM contains substantially finer elevation samples.
 
 ### Ultra-detail Sentinel-2 material
 
 - true-colour imagery uses Copernicus Sentinel-2 B04/B03/B02
-- the image is reprojected to the exact Phase 2 terrain bbox
+- the image is reprojected to the exact terrain bbox
 - source RGB resolution recorded by the pipeline: **10 m**
 - authoring texture: **4096 × 4096**, about **7.32 m/output texel** across the 30 km terrain footprint
 - authoring master: **lossless PNG**
 - browser texture: **4096 × 4096 WebP, quality 95**, encoded once from the lossless master
 - valid source coverage in the current composite: **99.9657%** before residual edge repair
 - the final GLB uses both `EXT_texture_webp` and `KHR_draco_mesh_compression`
-- final `damavand.glb`: about **5.3 MiB** on disk; the embedded WebP texture is about **4.68 MB**
-- no AI/synthetic super-resolution is used; the profile is designed to preserve the real source detail rather than manufacture extra geographic detail
+- final `damavand.glb`: about **7.4 MiB** on disk; the embedded WebP texture is about **4.68 MB**
+- no AI/synthetic super-resolution is used; the profile is designed to preserve real source detail rather than manufacture extra geographic detail
 - viewer sampling uses mipmaps, trilinear filtering and device-aware anisotropy up to 16×
-- close inspection uses a **0.32** OrbitControls minimum distance, zoom-to-cursor and a **0.015** camera near plane
-- the render budget allows up to **2.5 DPR / 8 million rendered pixels** before adaptive scaling
+- extreme inspection uses a **0.018** OrbitControls minimum distance, zoom-to-cursor and a **0.002** camera near plane
+- the render budget allows up to **3 DPR / 12 million rendered pixels** before adaptive scaling
 - imagery attribution is rendered in-view
 
-An 8K or 16K texture generated from the same 10 m source would mostly be an upscale rather than additional observed ground detail. The pipeline can accept a genuinely higher-resolution imagery source later without changing the terrain coordinate contract.
+An 8K or 16K texture generated from the same 10 m source would mostly be an upscale rather than additional observed ground detail. The next genuine imagery-quality jump requires a higher-resolution licensed imagery source rather than more interpolation.
 
 ### Cinematic camera
 
@@ -135,13 +138,16 @@ scripts/terrain/build_peak_terrain.py
 .github/workflows/build-damavand-terrain.yml
 ```
 
-Satellite imagery:
+The standalone terrain workflow is validation-only. It deliberately does not publish the canonical application GLB, preventing a terrain-only build from overwriting the satellite material.
+
+Canonical terrain + satellite build:
 
 ```text
 scripts/imagery/damavand.json
 scripts/imagery/build_sentinel_texture.py
 scripts/imagery/embed_texture.py
 scripts/imagery/apply_ultra_detail_code.py
+scripts/imagery/apply_extreme_detail_code.py
 .github/workflows/build-damavand-imagery.yml
 ```
 
@@ -170,7 +176,7 @@ scripts/hotspots/apply_phase6_code.py
 HOTSPOT_ATTRIBUTION.md
 ```
 
-The imagery workflow rebuilds the georeferenced 4K texture from the public source scenes, keeps a lossless authoring master, performs a single high-quality WebP encode, applies Draco geometry compression, validates source coverage and texture dimensions, then runs the production TypeScript/Vite build and ESLint before publishing the generated assets.
+The canonical imagery workflow now rebuilds the **1025-grid terrain and 4K texture together**, validates both manifests, keeps a lossless imagery master, performs a single high-quality WebP encode, applies Draco geometry compression, then runs the production TypeScript/Vite build and ESLint before publishing the matched model + terrain + imagery assets.
 
 ## Development
 
@@ -191,7 +197,7 @@ npm run lint
 ## Seven-phase roadmap
 
 1. ✅ **Foundation** — peak domain, Damavand-only runtime, stable viewer boundary
-2. ✅ **Real Terrain Pipeline** — production-density DEM → terrain mesh → validated + compressed Damavand GLB
+2. ✅ **Real Terrain Pipeline** — DEM → validated + compressed Damavand GLB, now at native-detail 1025 grid
 3. ✅ **Satellite Material & Lighting** — georeferenced Sentinel-2 texture, PBR terrain material and mountain daylight presentation
 4. ✅ **Camera & Cinematic Experience** — intro flight, interruptible cinematic orbit, camera-state synchronization, canonical reset and reduced motion
 5. ✅ **Routes & Mountain Intelligence** — generated South Route, real terrain projection, DEM-derived metrics, route focus/layers and local GPX import
