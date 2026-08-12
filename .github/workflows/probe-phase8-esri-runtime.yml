@@ -7,6 +7,7 @@ on:
       - phase8-digital-twin-build
     paths:
       - "scripts/digital_twin/probe_esri_wayback_runtime.py"
+      - "scripts/digital_twin/probe_esri_wayback_tile.py"
       - ".github/workflows/probe-phase8-esri-runtime.yml"
 
 permissions:
@@ -28,6 +29,9 @@ jobs:
         run: |
           python scripts/digital_twin/probe_esri_wayback_runtime.py \
             --output .cache/digital-twin/esri-wayback-runtime.json
+
+      - name: Validate summit runtime tile
+        run: python scripts/digital_twin/probe_esri_wayback_tile.py
 
       - name: Upload source report
         uses: actions/upload-artifact@v4
