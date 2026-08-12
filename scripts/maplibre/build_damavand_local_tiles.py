@@ -132,14 +132,26 @@ def sample_dem(
     source_tiles: dict[tuple[int, int], np.ndarray],
     lats: np.ndarray,
     lons: np.ndarray,
+    bounds: tuple[float, float, float, float],
 ) -> np.ndarray:
-    heights = np.full(lats.shape, np.nan, dtype=np.float32)
-    lat_keys = np.floor(lats + 1e-12).astype(np.int16)
-    lon_keys = np.floor(lons + 1e-12).astype(np.int16)
+    """Sample the observed bbox and edge-clamp only the unused margins of XYZ tiles.
+
+    Low zoom XYZ tiles are much larger than the 30 km source rectangle. MapLibre
+    uses the source `bounds` to constrain requests, but an edge tile still needs
+    valid RGB values across its full image. Clamping those unused margins to the
+    nearest bbox edge avoids downloading unrelated DEM degrees and, importantly,
+    does not invent extra detail inside the declared source bounds.
+    """
+    west, south, east, north = bounds
+    sample_lats = np.clip(lats, south, north)
+    sample_lons = np.clip(lons, west, east)
+    heights = np.full(sample_lats.shape, np.nan, dtype=np.float32)
+    lat_keys = np.floor(sample_lats + 1e-12).astype(np.int16)
+    lon_keys = np.floor(sample_lons + 1e-12).astype(np.int16)
     for (lat0, lon0), tile in source_tiles.items():
         mask = (lat_keys == lat0) & (lon_keys == lon0)
         if mask.any():
-            heights[mask] = bilinear_from_tile(tile, lat0, lon0, lats[mask], lons[mask])
+            heights[mask] = bilinear_from_tile(tile, lat0, lon0, sample_lats[mask], sample_lons[mask])
     if (~np.isfinite(heights)).any():
         heights = repair_small_grid_voids(heights)
     return heights
@@ -246,7 +258,7 @@ def main() -> None:
         for x in xs:
             for y in ys:
                 lons, lats = tile_lon_lat_grid(x, y, zoom, args.tile_size)
-                heights = sample_dem(dem_tiles, lats, lons)
+                heights = sample_dem(dem_tiles, lats, lons, bounds)
                 dem_path = args.output_dir / "dem" / str(zoom) / str(x) / f"{y}.png"
                 save_dem_tile(dem_path, heights)
                 dem_count += 1
@@ -289,6 +301,7 @@ def main() -> None:
             "attribution": terrain_manifest["source"]["attribution"],
             "source_native_resolution_m": 30,
             "source": "Skadi / SRTM 1 arc-second",
+            "edge_policy": "XYZ pixels outside the declared 30 km bbox are clamped to the nearest bbox edge; source bounds define the observed terrain extent.",
         },
         "presentation": {
             "terrain_exaggeration": 1.22,
