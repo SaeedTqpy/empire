@@ -1,0 +1,106 @@
+name: Build MapLibre Self-Hosted Terrain
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - maplibre-self-hosted
+    paths:
+      - "src/components/MapLibrePeakViewer.tsx"
+      - "src/maplibre-terrain.css"
+      - "src/App.tsx"
+      - "src/main.tsx"
+      - "package.json"
+      - "scripts/maplibre/**"
+      - ".github/workflows/build-maplibre-self-hosted.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: maplibre-self-hosted-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache DEM source tiles
+        uses: actions/cache@v4
+        with:
+          path: .terrain-cache
+          key: damavand-skadi-v1
+
+      - name: Install Python geospatial dependencies
+        run: python -m pip install --disable-pip-version-check -r scripts/imagery/requirements.txt
+
+      - name: Install web dependencies and refresh lockfile
+        run: npm install --no-audit --no-fund
+
+      - name: Build lossless Sentinel authoring master
+        run: |
+          mkdir -p .build/maplibre
+          python scripts/imagery/build_sentinel_texture.py \
+            --config scripts/imagery/damavand.json \
+            --texture .build/maplibre/damavand-sentinel-master.png \
+            --preview .build/maplibre/damavand-sentinel-preview.webp \
+            --manifest .build/maplibre/damavand.imagery.json
+
+      - name: Build local XYZ satellite and Terrarium DEM pyramid
+        run: |
+          python scripts/maplibre/build_damavand_local_tiles.py \
+            --terrain-config scripts/terrain/damavand.json \
+            --terrain-manifest public/models/damavand.terrain.json \
+            --imagery-manifest .build/maplibre/damavand.imagery.json \
+            --imagery-master .build/maplibre/damavand-sentinel-master.png \
+            --output-dir public/tiles/maplibre/damavand \
+            --cache-dir .terrain-cache \
+            --min-zoom 8 \
+            --max-zoom 14 \
+            --tile-size 512 \
+            --webp-quality 92 \
+            --clean
+
+      - name: Validate local terrain dataset
+        run: python scripts/maplibre/validate_damavand_local_tiles.py --dataset public/tiles/maplibre/damavand
+
+      - name: Dataset size gate
+        run: |
+          bytes=$(du -sb public/tiles/maplibre/damavand | cut -f1)
+          echo "MapLibre dataset bytes: $bytes"
+          test "$bytes" -lt 262144000
+
+      - name: Typecheck and production build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Publish generated local tiles and lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json public/tiles/maplibre/damavand
+          if git diff --cached --quiet; then
+            echo "Generated dataset already current"
+            exit 0
+          fi
+          git commit -m "build(maplibre): publish self-hosted Damavand terrain tiles"
+          git push origin HEAD:${GITHUB_REF_NAME}
