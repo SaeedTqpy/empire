@@ -4,9 +4,9 @@ Interactive 3D mountain atlas for Iran, starting with **Mount Damavand**.
 
 The product direction is a real-terrain experience: DEM-derived mountain geometry, satellite imagery, cinematic camera movement, climbing routes, shelters and mountain landmarks.
 
-## Current status — Phase 6 complete
+## Current status — Phase 6 complete + ultra-detail imagery profile
 
-Damavand now combines real terrain, georeferenced satellite imagery, an interruptible cinematic camera, terrain-aware 3D climbing routes, and geo-aware mountain markers that resolve onto the same DEM surface.
+Damavand now combines real terrain, georeferenced satellite imagery, an interruptible cinematic camera, terrain-aware 3D climbing routes, geo-aware mountain markers, and a close-inspection 4K satellite presentation profile.
 
 ### Real terrain
 
@@ -19,15 +19,24 @@ Damavand now combines real terrain, georeferenced satellite imagery, an interrup
 - vertical proportion: **1:1 physical scale**, no elevation exaggeration
 - sampled elevation inside the model: roughly **880 m to 5,595 m**
 
-### Sentinel-2 material
+### Ultra-detail Sentinel-2 material
 
 - true-colour imagery uses Copernicus Sentinel-2 B04/B03/B02
 - the image is reprojected to the exact Phase 2 terrain bbox
-- texture: **2048 × 2048 WebP**
-- valid source coverage in the current composite: **99.9655%** before residual edge repair
+- source RGB resolution recorded by the pipeline: **10 m**
+- authoring texture: **4096 × 4096**, about **7.32 m/output texel** across the 30 km terrain footprint
+- authoring master: **lossless PNG**
+- browser texture: **4096 × 4096 WebP, quality 95**, encoded once from the lossless master
+- valid source coverage in the current composite: **99.9657%** before residual edge repair
 - the final GLB uses both `EXT_texture_webp` and `KHR_draco_mesh_compression`
-- final `damavand.glb`: about **1.51 MiB**
+- final `damavand.glb`: about **5.3 MiB** on disk; the embedded WebP texture is about **4.68 MB**
+- no AI/synthetic super-resolution is used; the profile is designed to preserve the real source detail rather than manufacture extra geographic detail
+- viewer sampling uses mipmaps, trilinear filtering and device-aware anisotropy up to 16×
+- close inspection uses a **0.32** OrbitControls minimum distance, zoom-to-cursor and a **0.015** camera near plane
+- the render budget allows up to **2.5 DPR / 8 million rendered pixels** before adaptive scaling
 - imagery attribution is rendered in-view
+
+An 8K or 16K texture generated from the same 10 m source would mostly be an upscale rather than additional observed ground detail. The pipeline can accept a genuinely higher-resolution imagery source later without changing the terrain coordinate contract.
 
 ### Cinematic camera
 
@@ -132,6 +141,7 @@ Satellite imagery:
 scripts/imagery/damavand.json
 scripts/imagery/build_sentinel_texture.py
 scripts/imagery/embed_texture.py
+scripts/imagery/apply_ultra_detail_code.py
 .github/workflows/build-damavand-imagery.yml
 ```
 
@@ -160,7 +170,7 @@ scripts/hotspots/apply_phase6_code.py
 HOTSPOT_ATTRIBUTION.md
 ```
 
-The Phase 6 workflow applies the geo-aware marker migration, runs the production TypeScript/Vite build and ESLint, validates marker category coverage and publishes the validated viewer code back to `iran-peaks`.
+The imagery workflow rebuilds the georeferenced 4K texture from the public source scenes, keeps a lossless authoring master, performs a single high-quality WebP encode, applies Draco geometry compression, validates source coverage and texture dimensions, then runs the production TypeScript/Vite build and ESLint before publishing the generated assets.
 
 ## Development
 
