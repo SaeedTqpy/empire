@@ -22,6 +22,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
 import gsap from "gsap";
 import type { Empire, Vec3 } from "@/types/empire";
+import type { CameraMode } from "@/types/viewer-camera";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 (THREE.BufferGeometry.prototype as any).computeBoundsTree = computeBoundsTree;
@@ -111,6 +112,11 @@ export class ViewerEngine {
   private projScratch = new THREE.Vector3();
   private occScratch = new THREE.Vector3();
   private camState = { az: -38, el: 34, dist: 2.6, tx: 0, ty: 0.4, tz: 0 };
+  private cameraMode: CameraMode = "loading";
+  private cameraTl: gsap.core.Timeline | null = null;
+  private cameraTween: gsap.core.Tween | null = null;
+  private cameraInterrupted = false;
+  private userAutoRotate = false;
   private reducedMotion = false;
   private ready = false;
 
@@ -276,6 +282,10 @@ export class ViewerEngine {
     controls.minPolarAngle = Math.PI * 0.12;
     controls.autoRotateSpeed = 0.9;
     this.controls = controls;
+    controls.addEventListener("start", this.onDirectCameraInput);
+    controls.addEventListener("change", this.syncCamStateFromControls);
+    this.canvas.addEventListener("pointerdown", this.onDirectCameraInput, { passive: true });
+    this.canvas.addEventListener("wheel", this.onDirectCameraInput, { passive: true });
 
     this.scene.add(this.stage);
     this.resize();
@@ -1004,7 +1014,170 @@ export class ViewerEngine {
     this.controls.update();
   }
 
+  /** OrbitControls owns the camera during direct manipulation. Mirror that
+   * pose back into the authored camera state so the next zoom/focus/reset
+   * continues from exactly where the visitor left the camera. */
+  private syncCamStateFromControls = () => {
+    if (!this.controls || !this.camera) return;
+    const target = this.controls.target;
+    const offset = this.camera.position.clone().sub(target);
+    const dist = Math.max(0.0001, offset.length());
+    this.camState.tx = target.x;
+    this.camState.ty = target.y;
+    this.camState.tz = target.z;
+    this.camState.dist = dist;
+    this.camState.az = THREE.MathUtils.radToDeg(Math.atan2(offset.x, offset.z));
+    this.camState.el = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(offset.y / dist, -1, 1)));
+  };
+
+  private killCameraMotion() {
+    this.cameraTl?.kill();
+    this.cameraTween?.kill();
+    this.cameraTl = null;
+    this.cameraTween = null;
+  }
+
+  /** First direct interaction wins immediately over any authored camera move. */
+  private onDirectCameraInput = () => {
+    if (this.cameraMode === "intro" || this.cameraMode === "cinematic" || this.cameraMode === "focus") {
+      this.stopCinematic();
+    }
+  };
+
+  getCameraMode(): CameraMode {
+    return this.cameraMode;
+  }
+
+  stopCinematic() {
+    this.cameraInterrupted = true;
+    this.killCameraMotion();
+    this.cameraMode = "manual";
+    if (this.controls) this.controls.autoRotate = this.userAutoRotate;
+    this.syncCamStateFromControls();
+  }
+
+  /** One authored arrival, then one restrained orbit. It never fights input:
+   * pointer/touch/wheel/keyboard interaction hands control to the user at once. */
+  playPeakIntro(empire: Empire) {
+    if (!this.current || !this.controls) return;
+
+    this.killCameraMotion();
+    this.cameraInterrupted = false;
+    this.controls.autoRotate = false;
+
+    const h = this.current.size.y;
+    const heroDist = THREE.MathUtils.clamp(
+      this.fitDistance(empire),
+      this.controls.minDistance + 0.02,
+      this.controls.maxDistance - 0.02,
+    );
+    const heroTy = empire.camera.targetY * h + 0.05;
+    const hero = {
+      az: empire.camera.azimuth,
+      el: empire.camera.elevation,
+      dist: heroDist,
+      tx: 0,
+      ty: heroTy,
+      tz: 0,
+    };
+
+    if (this.reducedMotion) {
+      Object.assign(this.camState, hero);
+      this.applyCam();
+      this.cameraMode = "manual";
+      this.controls.autoRotate = this.userAutoRotate;
+      return;
+    }
+
+    this.cameraMode = "intro";
+    Object.assign(this.camState, {
+      az: hero.az - 28,
+      el: THREE.MathUtils.clamp(hero.el - 10, 14, 58),
+      dist: Math.min(this.controls.maxDistance - 0.02, Math.max(hero.dist * 1.55, hero.dist + 0.75)),
+      tx: 0,
+      ty: hero.ty - h * 0.08,
+      tz: 0,
+    });
+    this.applyCam();
+
+    this.cameraTl = gsap.timeline({
+      onComplete: () => {
+        this.cameraTl = null;
+        if (!this.cameraInterrupted) this.playCinematicOrbit(empire);
+      },
+      onInterrupt: () => {
+        this.cameraTl = null;
+      },
+    });
+    this.cameraTl.to(this.camState, {
+      ...hero,
+      duration: 2.45,
+      ease: "power3.out",
+      onUpdate: () => this.applyCam(),
+    });
+  }
+
+  playCinematicOrbit(empire: Empire) {
+    if (!this.current || !this.controls || this.reducedMotion || this.cameraInterrupted) {
+      if (this.controls) this.controls.autoRotate = this.userAutoRotate;
+      this.cameraMode = "manual";
+      return;
+    }
+
+    this.killCameraMotion();
+    this.cameraMode = "cinematic";
+    this.controls.autoRotate = false;
+
+    const baseAz = empire.camera.azimuth;
+    const baseEl = empire.camera.elevation;
+    const baseDist = THREE.MathUtils.clamp(
+      this.fitDistance(empire),
+      this.controls.minDistance + 0.02,
+      this.controls.maxDistance - 0.02,
+    );
+
+    this.cameraTl = gsap.timeline({
+      onComplete: () => {
+        this.cameraTl = null;
+        if (!this.cameraInterrupted) {
+          this.cameraMode = "manual";
+          this.controls.autoRotate = this.userAutoRotate;
+        }
+      },
+      onInterrupt: () => {
+        this.cameraTl = null;
+      },
+    });
+
+    this.cameraTl
+      .to(this.camState, {
+        az: baseAz + 10,
+        el: baseEl + 1.5,
+        dist: baseDist * 1.02,
+        duration: 2.35,
+        ease: "sine.inOut",
+        onUpdate: () => this.applyCam(),
+      })
+      .to(this.camState, {
+        az: baseAz - 7,
+        el: baseEl + 0.5,
+        dist: baseDist,
+        duration: 2.35,
+        ease: "sine.inOut",
+        onUpdate: () => this.applyCam(),
+      })
+      .to(this.camState, {
+        az: baseAz,
+        el: baseEl,
+        dist: baseDist,
+        duration: 1.45,
+        ease: "power2.out",
+        onUpdate: () => this.applyCam(),
+      });
+  }
+
   flyTo(az: number, el: number, dist: number, ty: number, dur = 1.4, onDone?: () => void) {
+    this.killCameraMotion();
     const target = {
       az,
       el,
@@ -1019,12 +1192,18 @@ export class ViewerEngine {
       onDone?.();
       return;
     }
-    gsap.to(this.camState, {
+    this.cameraTween = gsap.to(this.camState, {
       ...target,
       duration: dur,
       ease: "power3.inOut",
       onUpdate: () => this.applyCam(),
-      onComplete: onDone,
+      onComplete: () => {
+        this.cameraTween = null;
+        onDone?.();
+      },
+      onInterrupt: () => {
+        this.cameraTween = null;
+      },
     });
   }
 
@@ -1058,9 +1237,13 @@ export class ViewerEngine {
 
   focusAnchor(anchor: Vec3, empire: Empire, dur = 1.2) {
     if (!this.current) return;
+    this.killCameraMotion();
+    this.cameraInterrupted = true;
+    this.cameraMode = "focus";
+    if (this.controls) this.controls.autoRotate = false;
     const world = this.anchorToWorld(anchor);
     const az = this.camState.az;
-    gsap.to(this.camState, {
+    this.cameraTween = gsap.to(this.camState, {
       dist: this.fitDistance(empire, 0.62),
       tx: world.x * 0.72,
       ty: world.y * 0.72 + 0.06,
@@ -1069,7 +1252,22 @@ export class ViewerEngine {
       duration: this.reducedMotion ? 0 : dur,
       ease: "power3.inOut",
       onUpdate: () => this.applyCam(),
+      onComplete: () => {
+        this.cameraTween = null;
+        this.cameraMode = "manual";
+        if (this.controls) this.controls.autoRotate = this.userAutoRotate;
+      },
+      onInterrupt: () => {
+        this.cameraTween = null;
+      },
     });
+  }
+
+  resetPeakView(empire: Empire, animate = true) {
+    this.stopCinematic();
+    this.cameraInterrupted = true;
+    this.cameraMode = "manual";
+    this.frameEmpire(empire, animate);
   }
 
   /* ── modes ─────────────────────────────────────────────────────── */
@@ -1086,7 +1284,11 @@ export class ViewerEngine {
   }
 
   setAutoRotate(on: boolean) {
+    this.userAutoRotate = on;
     if (!this.controls) return;
+    if (on && (this.cameraMode === "intro" || this.cameraMode === "cinematic" || this.cameraMode === "focus")) {
+      this.stopCinematic();
+    }
     this.controls.autoRotate = on;
   }
 
@@ -1135,12 +1337,22 @@ export class ViewerEngine {
   }
 
   zoomBy(factor: number) {
+    this.stopCinematic();
     const d = THREE.MathUtils.clamp(this.camState.dist * factor, this.controls.minDistance, this.controls.maxDistance);
-    gsap.to(this.camState, { dist: d, duration: 0.4, ease: "power2.out", onUpdate: () => this.applyCam() });
+    this.cameraTween = gsap.to(this.camState, {
+      dist: d,
+      duration: this.reducedMotion ? 0 : 0.4,
+      ease: "power2.out",
+      onUpdate: () => this.applyCam(),
+      onComplete: () => {
+        this.cameraTween = null;
+      },
+    });
   }
 
   /** keyboard orbit support */
   nudge(dAz: number, dEl: number) {
+    this.stopCinematic();
     this.camState.az += dAz;
     this.camState.el = THREE.MathUtils.clamp(this.camState.el + dEl, 10, 82);
     this.applyCam();
@@ -1159,6 +1371,9 @@ export class ViewerEngine {
 
   setReducedMotion(v: boolean) {
     this.reducedMotion = v;
+    if (v && (this.cameraMode === "intro" || this.cameraMode === "cinematic")) {
+      this.stopCinematic();
+    }
   }
 
   onFrame(cb: FrameCallback) {
@@ -1172,7 +1387,12 @@ export class ViewerEngine {
 
   dispose() {
     this.disposed = true;
+    this.killCameraMotion();
     window.removeEventListener("resize", this.resize);
+    this.controls?.removeEventListener("start", this.onDirectCameraInput);
+    this.controls?.removeEventListener("change", this.syncCamStateFromControls);
+    this.canvas.removeEventListener("pointerdown", this.onDirectCameraInput);
+    this.canvas.removeEventListener("wheel", this.onDirectCameraInput);
     this.resizeObs?.disconnect();
     this.flushRetired();
     if (this.current) this.disposeModel(this.current);

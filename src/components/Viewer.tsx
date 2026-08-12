@@ -160,6 +160,10 @@ export const Viewer = memo(function Viewer({
       });
       if (token !== requestRef.current) return; // superseded mid-animation
 
+      // The first peak arrives through a deliberate flight + short orbit. Any
+      // direct interaction cancels it immediately inside ViewerEngine.
+      if (opts.initial) engine.playPeakIntro(next);
+
       setMarkersVisible(true);
 
       // warm the neighbours so the next pick is already in memory
@@ -202,7 +206,7 @@ export const Viewer = memo(function Viewer({
 
   const resetView = useCallback(() => {
     setActiveId(null);
-    engineRef.current?.frameEmpire(empire, true);
+    engineRef.current?.resetPeakView(empire, true);
     setTool("rotate");
   }, [empire]);
 

@@ -82,7 +82,7 @@ export const PeakInfoPanel = memo(function PeakInfoPanel({ peak, flow = false, a
           <PlayIcon className="h-4 w-4" />
           {animating ? "Stop 3D orbit" : "Start 3D orbit"}
         </button>
-        <p className="mt-2 text-center text-[0.72rem] text-ink-muted">Real Damavand DEM and satellite texture arrive in phases 2–3.</p>
+        <p className="mt-2 text-center text-[0.72rem] text-ink-muted">Real terrain + Sentinel-2 imagery · cinematic camera enabled.</p>
       </div>
     </div>
   );
