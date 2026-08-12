@@ -1,0 +1,40 @@
+name: Probe Phase 8 NASA Damavand Detail
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - phase8-digital-twin-build
+    paths:
+      - "scripts/digital_twin/probe_nasa_geotiff.py"
+      - ".github/workflows/probe-phase8-nasa-detail.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install raster probe dependencies
+        run: pip install rasterio==1.4.3
+
+      - name: Probe official NASA/JSC GeoTIFF
+        run: |
+          python scripts/digital_twin/probe_nasa_geotiff.py \
+            --output .cache/digital-twin/nasa-iss072-e-265.json
+
+      - name: Upload source report
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase8-nasa-source-report
+          path: .cache/digital-twin/nasa-iss072-e-265.json
+          if-no-files-found: error
