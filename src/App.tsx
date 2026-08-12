@@ -82,6 +82,8 @@ export default function App() {
         <main className="flex min-w-0 flex-1">
           <Viewer
             empire={viewerModel}
+            routes={viewerPeak.routes}
+            terrainManifestPath={viewerPeak.terrain.manifestPath}
             onSwap={(model) => setPanelPeak(peakById(model.id))}
             reducedMotion={reducedMotion}
             animating={animating}
