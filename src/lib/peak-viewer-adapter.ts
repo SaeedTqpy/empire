@@ -14,6 +14,17 @@ function hotspotFallbackAnchor(peak: Peak, hotspot: PeakHotspot): Vec3 {
   return [clamp01(0.5 + eastM / extentM), 0.5, clamp01(0.5 + northM / extentM)];
 }
 
+function imageryAttribution(peak: Peak) {
+  const sentinel = peak.terrain.imageryAttribution;
+  const detail = peak.terrain.streaming?.detailImagery;
+  if (!detail?.enabled) return sentinel;
+
+  // Keep both credits visible at all times. The VHR layer is geographically
+  // partial and can be disabled with ?detail=0, while Sentinel-2 remains the
+  // complete fallback under it.
+  return `${detail.attribution} · Sentinel-2 fallback: ${sentinel}`;
+}
+
 /**
  * Temporary compatibility boundary while the old viewer types are retired.
  * Peak semantics, including Phase 6 geo markers, stay intact across it.
@@ -27,7 +38,7 @@ export function peakToViewerModel(peak: Peak): Empire {
     description: peak.description,
     modelPath: peak.modelPath,
     streaming: peak.terrain.streaming,
-    imageryAttribution: peak.terrain.imageryAttribution,
+    imageryAttribution: imageryAttribution(peak),
     tint: peak.tint,
     camera: peak.camera,
     facts: [],
