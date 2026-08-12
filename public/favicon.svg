@@ -1,9 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <path d="M24 5L44 17H4L24 5Z" fill="#a55338"/>
-  <rect x="7" y="19" width="4.5" height="18" rx="1" fill="#a55338"/>
-  <rect x="15" y="19" width="4.5" height="18" rx="1" fill="#a55338"/>
-  <rect x="23" y="19" width="4.5" height="18" rx="1" fill="#a55338"/>
-  <rect x="31" y="19" width="4.5" height="18" rx="1" fill="#a55338"/>
-  <rect x="39" y="19" width="4.5" height="18" rx="1" fill="#a55338"/>
-  <rect x="4" y="39" width="40" height="3.5" rx="1.2" fill="#a55338"/>
+  <rect x="2" y="2" width="44" height="44" rx="12" fill="#FFF8EA" stroke="#C3A779"/>
+  <path d="M7 37.5 18.2 24l5.8 6.1L29.8 20 41 37.5H7Z" fill="#245B72"/>
+  <path d="m18.2 24 3.1 3.25 2.7 2.85 2.4-4.2 3.4-5.9 2.25 3.52-2.32-.56-1.92 3.4-2.02-.76-1.78 3.12-2.33-2.42-1.76.66L18.2 24Z" fill="#F3EADC" opacity=".96"/>
+  <g fill="#A6513D" transform="translate(24 12)">
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(30)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(60)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(90)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(120)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(150)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(180)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(210)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(240)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(270)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(300)"/>
+    <ellipse cx="0" cy="-5.2" rx="1.25" ry="3.7" transform="rotate(330)"/>
+    <circle r="2.3" fill="#C3923F"/>
+  </g>
 </svg>
