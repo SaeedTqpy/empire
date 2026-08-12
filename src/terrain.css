@@ -172,3 +172,51 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Phase 7 spatial 3D Tiles status */
+.streaming-status {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  z-index: 19;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgb(255 255 255 / 0.38);
+  border-radius: 999px;
+  background: rgb(28 43 49 / 0.54);
+  padding: 5px 8px;
+  color: rgb(248 251 250 / 0.9);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.025em;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.streaming-status__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #82c9a3;
+  box-shadow: 0 0 0 3px rgb(130 201 163 / 0.16);
+}
+
+.streaming-status.is-fallback .streaming-status__dot {
+  background: #e2a45e;
+  box-shadow: 0 0 0 3px rgb(226 164 94 / 0.16);
+}
+
+@media (max-width: 639px) {
+  .streaming-status {
+    left: 7px;
+    bottom: 6px;
+    max-width: 48%;
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

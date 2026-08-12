@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "peak_id": "damavand",
+  "dataset_version": "phase7-v1",
+  "format": "3D Tiles 1.1",
+  "tile_count": 21,
+  "max_depth": 2,
+  "interaction_grid": 513,
+  "source_full_grid": 1025,
+  "total_asset_bytes": 9818164,
+  "elevation_m": {
+    "min": 877.44,
+    "max": 5598.61,
+    "base": 757
+  },
+  "profiles": [
+    {
+      "level": 0,
+      "divisions": 1,
+      "grid_size": 129,
+      "texture_size": 512,
+      "webp_quality": 82
+    },
+    {
+      "level": 1,
+      "divisions": 2,
+      "grid_size": 129,
+      "texture_size": 512,
+      "webp_quality": 88
+    },
+    {
+      "level": 2,
+      "divisions": 4,
+      "grid_size": 257,
+      "texture_size": 1024,
+      "webp_quality": 95
+    }
+  ],
+  "source_tiles": [
+    {
+      "tile": "N35E051",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N35/N35E051.hgt.gz",
+      "samples_per_side": 3601
+    },
+    {
+      "tile": "N35E052",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N35/N35E052.hgt.gz",
+      "samples_per_side": 3601
+    },
+    {
+      "tile": "N36E051",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N36/N36E051.hgt.gz",
+      "samples_per_side": 3601
+    },
+    {
+      "tile": "N36E052",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N36/N36E052.hgt.gz",
+      "samples_per_side": 3601
+    }
+  ]
+}

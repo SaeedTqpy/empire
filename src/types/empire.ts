@@ -1,3 +1,5 @@
+import type { TerrainStreamingConfig } from "./streaming";
+
 /** Empire Atlas — core data contracts.
  *  The entire application is driven by these types; adding a new empire
  *  means adding data + assets, never touching the viewer or UI. */
@@ -99,6 +101,8 @@ export interface Empire {
   subtitle: string;
   description: string;
   modelPath: string;
+  /** Optional Phase 7 spatial LOD configuration. */
+  streaming?: TerrainStreamingConfig;
   /** Optional public credit for imagery baked into the model. */
   imageryAttribution?: string;
   /** per-empire warm accent used for subtle scene tinting */

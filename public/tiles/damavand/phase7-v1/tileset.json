@@ -1,0 +1,696 @@
+{
+  "asset": {
+    "version": "1.1",
+    "generator": "Iran 3D Peaks Phase 7 spatial streaming pipeline"
+  },
+  "geometricError": 234.375,
+  "root": {
+    "boundingVolume": {
+      "box": [
+        0.0,
+        2441.01611328125,
+        0.0,
+        15000.0,
+        0.0,
+        0.0,
+        0.0,
+        2394.6376953125,
+        0.0,
+        0.0,
+        0.0,
+        15000.0
+      ]
+    },
+    "geometricError": 234.375,
+    "refine": "REPLACE",
+    "content": {
+      "uri": "l0/r0_c0.glb"
+    },
+    "extras": {
+      "lod": 0,
+      "row": 0,
+      "col": 0,
+      "gridSize": 129,
+      "textureSize": 512,
+      "groundSampleM": 234.375,
+      "imageryTexelM": 58.5938
+    },
+    "children": [
+      {
+        "boundingVolume": {
+          "box": [
+            -7500.0,
+            3125.609130859375,
+            7500.0,
+            7500.0,
+            0.0,
+            0.0,
+            0.0,
+            1710.044677734375,
+            0.0,
+            0.0,
+            0.0,
+            7500.0
+          ]
+        },
+        "geometricError": 117.1875,
+        "refine": "REPLACE",
+        "content": {
+          "uri": "l1/r0_c0.glb"
+        },
+        "extras": {
+          "lod": 1,
+          "row": 0,
+          "col": 0,
+          "gridSize": 129,
+          "textureSize": 512,
+          "groundSampleM": 117.1875,
+          "imageryTexelM": 29.2969
+        },
+        "children": [
+          {
+            "boundingVolume": {
+              "box": [
+                -11250.0,
+                2572.8380126953125,
+                11250.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                903.4622802734375,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r0_c0.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 0,
+              "col": 0,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -3750.0,
+                2235.7105712890625,
+                11250.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                820.3751220703125,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r0_c1.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 0,
+              "col": 1,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -11250.0,
+                2544.7320556640625,
+                3750.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                652.7410888671875,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r1_c0.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 1,
+              "col": 0,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -3750.0,
+                3461.09814453125,
+                3750.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                1380.5146484375,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r1_c1.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 1,
+              "col": 1,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          }
+        ]
+      },
+      {
+        "boundingVolume": {
+          "box": [
+            7500.0,
+            2439.1484375,
+            7500.0,
+            7500.0,
+            0.0,
+            0.0,
+            0.0,
+            2396.50537109375,
+            0.0,
+            0.0,
+            0.0,
+            7500.0
+          ]
+        },
+        "geometricError": 117.1875,
+        "refine": "REPLACE",
+        "content": {
+          "uri": "l1/r0_c1.glb"
+        },
+        "extras": {
+          "lod": 1,
+          "row": 0,
+          "col": 1,
+          "gridSize": 129,
+          "textureSize": 512,
+          "groundSampleM": 117.1875,
+          "imageryTexelM": 29.2969
+        },
+        "children": [
+          {
+            "boundingVolume": {
+              "box": [
+                3750.0,
+                1734.6571655273438,
+                11250.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                1073.2615356445312,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r0_c2.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 0,
+              "col": 2,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                11250.0,
+                1039.8435363769531,
+                11250.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                1005.0871276855469,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r0_c3.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 0,
+              "col": 3,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                3750.0,
+                3011.9733276367188,
+                3750.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                1829.6394653320312,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r1_c2.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 1,
+              "col": 2,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                11250.0,
+                1453.9129028320312,
+                3750.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                1081.9537963867188,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r1_c3.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 1,
+              "col": 3,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          }
+        ]
+      },
+      {
+        "boundingVolume": {
+          "box": [
+            -7500.0,
+            2887.2006225585938,
+            -7500.0,
+            7500.0,
+            0.0,
+            0.0,
+            0.0,
+            1775.1367797851562,
+            0.0,
+            0.0,
+            0.0,
+            7500.0
+          ]
+        },
+        "geometricError": 117.1875,
+        "refine": "REPLACE",
+        "content": {
+          "uri": "l1/r1_c0.glb"
+        },
+        "extras": {
+          "lod": 1,
+          "row": 1,
+          "col": 0,
+          "gridSize": 129,
+          "textureSize": 512,
+          "groundSampleM": 117.1875,
+          "imageryTexelM": 29.2969
+        },
+        "children": [
+          {
+            "boundingVolume": {
+              "box": [
+                -11250.0,
+                2208.0279541015625,
+                -3750.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                633.7957763671875,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r2_c0.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 2,
+              "col": 0,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -3750.0,
+                3190.0958251953125,
+                -3750.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                1472.2415771484375,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r2_c1.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 2,
+              "col": 1,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -11250.0,
+                2205.4793701171875,
+                -11250.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                724.2462158203125,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r3_c0.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 3,
+              "col": 0,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -3750.0,
+                1802.1468505859375,
+                -11250.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                690.3697509765625,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r3_c1.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 3,
+              "col": 1,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          }
+        ]
+      },
+      {
+        "boundingVolume": {
+          "box": [
+            7500.0,
+            2606.7186279296875,
+            -7500.0,
+            7500.0,
+            0.0,
+            0.0,
+            0.0,
+            2080.9600830078125,
+            0.0,
+            0.0,
+            0.0,
+            7500.0
+          ]
+        },
+        "geometricError": 117.1875,
+        "refine": "REPLACE",
+        "content": {
+          "uri": "l1/r1_c1.glb"
+        },
+        "extras": {
+          "lod": 1,
+          "row": 1,
+          "col": 1,
+          "gridSize": 129,
+          "textureSize": 512,
+          "groundSampleM": 117.1875,
+          "imageryTexelM": 29.2969
+        },
+        "children": [
+          {
+            "boundingVolume": {
+              "box": [
+                3750.0,
+                2744.2948608398438,
+                -3750.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                1943.3838500976562,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r2_c2.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 2,
+              "col": 2,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                11250.0,
+                1503.89892578125,
+                -3750.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                978.140380859375,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r2_c3.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 2,
+              "col": 3,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                3750.0,
+                1537.709228515625,
+                -11250.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                730.598388671875,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r3_c2.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 3,
+              "col": 2,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                11250.0,
+                1971.29638671875,
+                -11250.0,
+                3750.0,
+                0.0,
+                0.0,
+                0.0,
+                1135.01513671875,
+                0.0,
+                0.0,
+                0.0,
+                3750.0
+              ]
+            },
+            "geometricError": 0.0,
+            "refine": "REPLACE",
+            "content": {
+              "uri": "l2/r3_c3.glb"
+            },
+            "extras": {
+              "lod": 2,
+              "row": 3,
+              "col": 3,
+              "gridSize": 257,
+              "textureSize": 1024,
+              "groundSampleM": 29.2969,
+              "imageryTexelM": 7.3242
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "extras": {
+    "peak": "damavand",
+    "datasetVersion": "phase7-v1",
+    "coordinateContract": "+X east, +Y elevation above shared base, +Z north, metres",
+    "sourceTerrain": "Skadi/SRTM",
+    "sourceImagery": "Copernicus Sentinel-2"
+  }
+}

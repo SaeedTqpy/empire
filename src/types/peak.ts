@@ -5,6 +5,7 @@
  */
 
 import type { PeakRoute } from "./route";
+import type { TerrainStreamingConfig } from "./streaming";
 
 export type Vec3 = [number, number, number];
 
@@ -74,6 +75,8 @@ export interface PeakTerrain {
   /** 1.0 means elevations are rendered in their real physical proportion. */
   verticalExaggeration: number;
   sourceLabel: string;
+  /** Phase 7 spatial LOD. The canonical model remains the full fallback. */
+  streaming?: TerrainStreamingConfig;
 }
 
 export interface Peak {

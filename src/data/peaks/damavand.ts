@@ -38,6 +38,14 @@ export const damavand: Peak = {
     gridSize: 1025,
     verticalExaggeration: 1.0,
     sourceLabel: "SRTM terrain + Copernicus Sentinel-2 imagery",
+    streaming: {
+      enabled: true,
+      tilesetPath: "/tiles/damavand/phase7-v1/tileset.json",
+      interactionModelPath: "/tiles/damavand/phase7-v1/interaction.glb",
+      datasetVersion: "phase7-v1",
+      targetSSE: 2.5,
+      maxDepth: 2,
+    },
   },
   tint: "#6f91a4",
   camera: {

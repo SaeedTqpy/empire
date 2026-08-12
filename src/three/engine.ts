@@ -24,6 +24,8 @@ import gsap from "gsap";
 import type { Empire, Hotspot, Vec3 } from "@/types/empire";
 import type { CameraMode } from "@/types/viewer-camera";
 import type { GeoRoutePoint, RouteMetrics, TerrainGeoReference } from "@/types/route";
+import type { TerrainStreamingStats } from "@/types/streaming";
+import { TerrainTilesStreamer } from "@/three/terrain-streaming";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 (THREE.BufferGeometry.prototype as any).computeBoundsTree = computeBoundsTree;
@@ -141,9 +143,13 @@ export class ViewerEngine {
   private hotspotRay = new THREE.Raycaster();
   private reducedMotion = false;
   private maxTextureAnisotropy = 8;
+  private terrainStreamer: TerrainTilesStreamer | null = null;
+  private streamingWireframe = false;
+  private streamingXray = false;
   private ready = false;
 
   onLoadProgress: ((pct: number) => void) | null = null;
+  onStreamingStats: ((stats: TerrainStreamingStats) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -411,6 +417,7 @@ export class ViewerEngine {
     const ratio = wanted > MAX_PIXELS ? Math.max(1, dpr * Math.sqrt(MAX_PIXELS / wanted)) : dpr;
     this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
+    this.terrainStreamer?.syncResolution();
     this.markShadowDirty(2);
   };
 
@@ -419,6 +426,7 @@ export class ViewerEngine {
     requestAnimationFrame(this.loop);
     const dt = this.clock.getDelta();
     this.controls?.update();
+    this.terrainStreamer?.update();
     // idle glow pulse — only worth computing while something is highlighted
     if (this.glowShell?.visible) {
       this.glowPulse.value = 0.55 + Math.sin(performance.now() * 0.0024) * 0.25;
@@ -438,12 +446,20 @@ export class ViewerEngine {
   };
 
   /* ── model loading & normalization ─────────────────────────────── */
+  private streamingEnabled(empire: Empire) {
+    const queryDisabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("streaming") === "0";
+    return !queryDisabled && Boolean(empire.streaming?.enabled);
+  }
+
   load(empire: Empire): Promise<LoadedModel> {
     const cached = this.cache.get(empire.id);
     if (cached) return cached;
+    const modelPath = this.streamingEnabled(empire) && empire.streaming
+      ? empire.streaming.interactionModelPath
+      : empire.modelPath;
     const p = new Promise<LoadedModel>((resolve, reject) => {
       this.loader.load(
-        empire.modelPath,
+        modelPath,
         (gltf) => {
           try {
             const model = this.normalize(gltf.scene, empire);
@@ -602,19 +618,64 @@ export class ViewerEngine {
     this.markShadowDirty(1);
   }
 
-  /** Hand the stage over: `model` becomes the current dwelling. Recently
-   *  seen dwellings stay parsed and resident, so switching back to one is
-   *  instant instead of a fresh download, re-parse and re-snap. */
-  present(model: LoadedModel) {
+  private stopTerrainStreaming() {
+    this.terrainStreamer?.dispose();
+    this.terrainStreamer = null;
+  }
+
+  private startTerrainStreaming(model: LoadedModel, empire: Empire) {
+    this.stopTerrainStreaming();
+    if (!this.streamingEnabled(empire) || !empire.streaming) {
+      model.meshes.forEach((mesh) => { mesh.visible = true; });
+      return;
+    }
+
+    const streamer = new TerrainTilesStreamer(
+      empire.streaming,
+      this.camera,
+      this.renderer,
+      this.maxTextureAnisotropy,
+    );
+    this.terrainStreamer = streamer;
+    streamer.group.scale.setScalar(model.normalizationScale);
+    streamer.group.position.copy(model.normalizationOffset);
+    model.group.add(streamer.group);
+    streamer.setWireframe(this.streamingWireframe);
+    streamer.setXray(this.streamingXray);
+    streamer.onStats = (stats) => this.onStreamingStats?.(stats);
+    streamer.onFirstVisual = () => {
+      // The proxy stays in the scene graph for BVH/raycast interaction, but it
+      // no longer contributes fragments once streamed terrain is available.
+      model.meshes.forEach((mesh) => { mesh.visible = false; });
+      this.markShadowDirty(2);
+    };
+    streamer.onFatalError = (error) => {
+      console.error("terrain streaming failed; keeping canonical proxy fallback", error);
+      model.meshes.forEach((mesh) => { mesh.visible = true; });
+      this.stopTerrainStreaming();
+      this.onStreamingStats?.({
+        mode: "fallback", loading: false, progress: 1, visibleTiles: 0,
+        activeTiles: 0, loadedTiles: 0, visibleDepth: 0,
+        maxDepth: empire.streaming?.maxDepth ?? 0, failed: true,
+      });
+    };
+    streamer.syncResolution();
+  }
+
+  /** Hand the stage over: `model` becomes the current mountain. */
+  present(model: LoadedModel, empire?: Empire) {
     const old = this.current;
     if (old && old.empireId !== model.empireId) this.stage.remove(old.group);
+    this.stopTerrainStreaming();
     this.clearRouteMesh();
     this.geoHotspotLocal.clear();
     this.current = model;
     this.occlusionCache.clear();
+    model.meshes.forEach((mesh) => { mesh.visible = true; });
     this.attach(model);
     this.touchResidency(model.empireId);
     this.rebuildRouteOverlay();
+    if (empire) this.startTerrainStreaming(model, empire);
   }
 
   /** Mark an empire as most-recently-used and evict past the residency cap.
@@ -692,7 +753,7 @@ export class ViewerEngine {
     };
 
     const handover = () => {
-      this.present(next);
+      this.present(next, empire);
       onMidpoint?.();
       this.setTint(empire.tint, 1.0);
       this.frameEmpire(empire, !instant);
@@ -1629,6 +1690,11 @@ export class ViewerEngine {
   }
 
   setWireframe(on: boolean) {
+    this.streamingWireframe = on;
+    if (this.terrainStreamer) {
+      this.terrainStreamer.setWireframe(on);
+      return;
+    }
     if (on && this.current && !this.wireOverlay) {
       const src = this.current.meshes[0];
       if (src) {
@@ -1652,6 +1718,11 @@ export class ViewerEngine {
   }
 
   setXray(on: boolean) {
+    this.streamingXray = on;
+    if (this.terrainStreamer) {
+      this.terrainStreamer.setXray(on);
+      return;
+    }
     if (!this.current) return;
     this.current.meshes.forEach((m) => {
       const mat = m.material as any;
@@ -1727,6 +1798,7 @@ export class ViewerEngine {
 
   dispose() {
     this.disposed = true;
+    this.stopTerrainStreaming();
     this.clearRouteMesh();
     this.killCameraMotion();
     window.removeEventListener("resize", this.resize);

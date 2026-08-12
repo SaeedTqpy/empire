@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { Empire } from "@/types/empire";
 import type { PeakRoute, RouteDocument, RouteMetrics, TerrainManifestDocument } from "@/types/route";
+import type { TerrainStreamingStats } from "@/types/streaming";
 import { EMPIRES } from "@/data";
 import { parseGpx } from "@/lib/gpx";
 import { ViewerEngine } from "@/three/engine";
@@ -67,6 +68,7 @@ export const Viewer = memo(function Viewer({
   const [routeMetrics, setRouteMetrics] = useState<RouteMetrics | null>(null);
   const [routeName, setRouteName] = useState(routes[0]?.name ?? "Mountain route");
   const [routeImported, setRouteImported] = useState(false);
+  const [streamingStats, setStreamingStats] = useState<TerrainStreamingStats | null>(null);
   const requestRef = useRef(0);
   const loadingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -85,6 +87,7 @@ export const Viewer = memo(function Viewer({
       engine.onLoadProgress = (pct) => {
         setLoading((l) => (l ? { ...l, pct } : null));
       };
+      engine.onStreamingStats = setStreamingStats;
       setEngineReady(true);
       onPrefetchReady?.((e) => engine.preload(e));
       await presentEmpire(empire, { initial: true });
@@ -320,6 +323,18 @@ export const Viewer = memo(function Viewer({
         {empire.imageryAttribution && (
           <div className="viewer-attribution" aria-label="Satellite imagery attribution">
             {empire.imageryAttribution}
+          </div>
+        )}
+        {streamingStats && (
+          <div
+            className={`streaming-status ${streamingStats.failed ? "is-fallback" : ""}`}
+            aria-live="polite"
+            title="Camera-driven spatial level of detail"
+          >
+            <span className="streaming-status__dot" />
+            {streamingStats.mode === "3d-tiles"
+              ? `3D Tiles · LOD ${streamingStats.visibleDepth}/${streamingStats.maxDepth} · ${streamingStats.visibleTiles} visible${streamingStats.loading ? " · loading" : ""}`
+              : "Terrain fallback · streaming unavailable"}
           </div>
         )}
       </div>
