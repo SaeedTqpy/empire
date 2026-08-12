@@ -15,6 +15,8 @@ export interface TerrainDetailImageryConfig {
   sourceDate: string;
   sourceLabel: string;
   attribution: string;
+  /** Validated WGS84 footprint/bounds of the matching high-detail source. */
+  coverageBboxWgs84?: [west: number, south: number, east: number, north: number];
   /** Local terrain georeference used to derive exact lon/lat per vertex. */
   centerLat: number;
   centerLon: number;
