@@ -1,0 +1,754 @@
+/*
+ * Iran 3D Peaks — Iranian architectural design layer
+ *
+ * Visual grammar is intentionally broader than "Islamic ornament":
+ * - Achaemenid: stone platforms, axial procession, lotus / palmette / rosette bands
+ * - Sasanian: brick, plaster, vault-like framing and strong portals
+ * - Persian garden: four-part geometry, water axes, ordered nature
+ * - Yazd vernacular: earth, shade, courtyards, windcatcher-era material restraint
+ *
+ * This file is imported last so it can remap the legacy museum palette without
+ * destabilising the mountain, route or MapLibre rendering code.
+ */
+
+:root {
+  --paper: #f3eadc;
+  --paper-deep: #e8d9c2;
+  --cream: #efe0c7;
+  --surface: #fffaf0;
+  --ink: #2e2923;
+  --ink-soft: #5a4f43;
+  --ink-muted: #847565;
+  --terracotta: #a6513d;
+  --terracotta-deep: #78382e;
+  --terracotta-soft: #c2785f;
+  --gold: #b8893e;
+  --line: #dac7a8;
+  --line-strong: #c3a779;
+  --slate-icon: #31566a;
+  --marker: #b35b3d;
+
+  --iran-lapis: #245b72;
+  --iran-lapis-deep: #193f50;
+  --iran-turquoise: #347b76;
+  --iran-garden: #536b50;
+  --iran-water: #6d9fa1;
+  --iran-saffron: #c3923f;
+  --iran-adobe: #caa77f;
+  --iran-stone: #756856;
+  --iran-plaster: #fff8ea;
+  --iran-shadow: rgb(51 39 28 / 0.16);
+
+  --background: 36 43% 91%;
+  --foreground: 31 14% 16%;
+  --card: 40 100% 97%;
+  --card-foreground: 31 14% 16%;
+  --popover: 40 100% 97%;
+  --popover-foreground: 31 14% 16%;
+  --primary: 198 52% 29%;
+  --primary-foreground: 42 70% 97%;
+  --secondary: 37 42% 84%;
+  --secondary-foreground: 31 18% 22%;
+  --muted: 36 30% 86%;
+  --muted-foreground: 31 12% 46%;
+  --accent: 170 39% 34%;
+  --accent-foreground: 40 70% 97%;
+  --border: 37 34% 76%;
+  --input: 37 34% 76%;
+  --ring: 198 52% 29%;
+  --radius: 0.55rem;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  font-family: "Estedad Variable", "Vazirmatn", Tahoma, Arial, sans-serif;
+  font-variation-settings: "wght" 430;
+  font-feature-settings: "kern" 1, "liga" 1;
+  background:
+    radial-gradient(900px 620px at 13% 8%, rgb(202 167 127 / 0.18), transparent 62%),
+    radial-gradient(760px 520px at 88% 16%, rgb(52 123 118 / 0.08), transparent 66%),
+    linear-gradient(180deg, #f7efe3 0%, var(--paper) 34%, #eee2d0 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: rgb(36 91 114 / 0.2);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline-color: var(--iran-lapis);
+}
+
+.font-display,
+.kicker,
+.hs-tip .cat,
+.hs-tip .t,
+.hs-tip .d {
+  font-family: "Estedad Variable", "Vazirmatn", Tahoma, Arial, sans-serif;
+}
+
+.font-display {
+  font-style: normal;
+  letter-spacing: -0.025em;
+}
+
+.kicker {
+  position: relative;
+  gap: 0.45rem;
+  align-items: center;
+  font-style: normal;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--iran-lapis);
+}
+
+.kicker::before {
+  content: "";
+  width: 18px;
+  height: 2px;
+  flex: none;
+  background: linear-gradient(90deg, var(--iran-saffron), var(--terracotta));
+  box-shadow: 5px 4px 0 -1px rgb(36 91 114 / 0.45);
+}
+
+.fa-label {
+  direction: rtl;
+  unicode-bidi: isolate;
+  letter-spacing: 0;
+}
+
+/* ── The whole page as a restrained chahar-bagh field ─────────── */
+.iranian-shell {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+
+.iranian-shell::before {
+  content: "";
+  position: fixed;
+  inset: 70px 0 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.42;
+  background:
+    linear-gradient(90deg,
+      transparent calc(50% - 1px),
+      rgb(109 159 161 / 0.16) calc(50% - 1px),
+      rgb(109 159 161 / 0.16) calc(50% + 1px),
+      transparent calc(50% + 1px)),
+    linear-gradient(180deg,
+      transparent 34%,
+      rgb(83 107 80 / 0.06) 34%,
+      rgb(83 107 80 / 0.06) calc(34% + 1px),
+      transparent calc(34% + 1px));
+}
+
+.iranian-shell::after {
+  content: "";
+  position: fixed;
+  top: 68px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  z-index: 45;
+  pointer-events: none;
+  opacity: 0.78;
+  background:
+    linear-gradient(45deg, transparent 38%, var(--iran-lapis) 39% 48%, transparent 49%) 0 0 / 18px 18px,
+    linear-gradient(-45deg, transparent 38%, var(--iran-saffron) 39% 48%, transparent 49%) 9px 0 / 18px 18px;
+}
+
+.iranian-courtyard-grid {
+  position: relative;
+}
+
+.iranian-courtyard-grid::before {
+  content: "";
+  position: absolute;
+  inset: 9px 0 auto 50%;
+  width: 52px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, var(--iran-water), transparent);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ── Header: Apadana-like ordered rhythm, not a mosque silhouette ─ */
+.iranian-header {
+  min-height: 72px;
+  height: auto;
+  border-bottom: 1px solid var(--line-strong);
+  background:
+    linear-gradient(90deg, rgb(36 91 114 / 0.035), transparent 22%, transparent 78%, rgb(166 81 61 / 0.035)),
+    rgb(255 250 240 / 0.96);
+  box-shadow: 0 8px 28px -24px rgb(46 41 35 / 0.5);
+  backdrop-filter: blur(16px) saturate(1.08);
+}
+
+.iranian-header::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--iran-saffron) 18%, var(--iran-lapis) 50%, var(--iran-saffron) 82%, transparent);
+  opacity: 0.65;
+}
+
+.iranian-brand-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 43px;
+  height: 43px;
+  flex: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 50% 50% 50% 9px;
+  background:
+    radial-gradient(circle at 50% 48%, rgb(195 146 63 / 0.14), transparent 58%),
+    var(--surface);
+  color: var(--iran-lapis);
+  box-shadow:
+    inset 0 0 0 3px rgb(255 250 240 / 0.9),
+    0 5px 16px -10px rgb(46 41 35 / 0.45);
+}
+
+.iranian-brand-mark::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  right: -3px;
+  bottom: -3px;
+  border: 1px solid var(--iran-saffron);
+  background: var(--paper);
+  transform: rotate(45deg);
+}
+
+.iranian-brand-fa {
+  display: block;
+  direction: rtl;
+  font-size: clamp(1.12rem, 1.7vw, 1.48rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+
+.iranian-brand-en {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 620;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  color: var(--iran-lapis);
+}
+
+.iranian-icon-button {
+  border-color: var(--line-strong) !important;
+  border-radius: 4px 12px 4px 12px !important;
+  background: rgb(255 250 240 / 0.92) !important;
+  color: var(--iran-lapis) !important;
+  box-shadow: 0 5px 14px -11px var(--iran-shadow);
+}
+
+.iranian-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px 12px 3px 12px;
+  padding: 0.45rem 0.7rem;
+  background: rgb(255 250 240 / 0.8);
+  color: var(--ink-muted);
+  font-size: 0.68rem;
+  font-weight: 590;
+}
+
+.iranian-status-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--iran-garden);
+  box-shadow: 0 0 0 3px rgb(83 107 80 / 0.12);
+}
+
+.nav-item {
+  position: relative;
+  min-height: 42px;
+  gap: 9px;
+  border: 1px solid transparent;
+  border-radius: 3px 12px 3px 12px;
+  padding: 6px 12px;
+  color: var(--ink-soft);
+}
+
+.nav-item:hover {
+  border-color: rgb(195 167 121 / 0.58);
+  background: rgb(232 217 194 / 0.48);
+  color: var(--ink);
+}
+
+.nav-item.is-active {
+  border-color: var(--iran-lapis-deep);
+  background: linear-gradient(135deg, var(--iran-lapis), #2d6d80);
+  color: var(--iran-plaster);
+  box-shadow: 0 8px 18px -12px rgb(25 63 80 / 0.75);
+}
+
+.nav-item.is-active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 3px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--iran-saffron), transparent);
+}
+
+.nav-copy {
+  display: grid;
+  gap: 1px;
+  line-height: 1;
+  text-align: left;
+}
+
+.nav-copy > span {
+  direction: rtl;
+  font-size: 0.77rem;
+  font-weight: 720;
+}
+
+.nav-copy > small {
+  font-size: 0.58rem;
+  font-weight: 560;
+  letter-spacing: 0.035em;
+  opacity: 0.72;
+}
+
+/* ── Cards and panels: plaster surfaces on stone/brick edges ───── */
+.atlas-card,
+.modal-panel,
+.artifact-card,
+.quiz-choice {
+  border-color: var(--line);
+  background:
+    linear-gradient(135deg, rgb(36 91 114 / 0.018), transparent 28%),
+    var(--surface);
+}
+
+.atlas-card {
+  position: relative;
+  border-radius: 4px 18px 4px 18px;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.9) inset,
+    0 16px 34px -28px rgb(58 43 30 / 0.45),
+    0 2px 6px rgb(58 43 30 / 0.035);
+}
+
+[data-panel="library"]::after,
+[data-panel="info"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18px;
+  right: 18px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--terracotta) 22%, var(--iran-saffron) 50%, var(--iran-lapis) 78%, transparent);
+  opacity: 0.62;
+  pointer-events: none;
+}
+
+.iranian-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.iranian-panel-title-stack {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.iranian-panel-subtitle {
+  font-size: 0.64rem;
+  font-weight: 530;
+  letter-spacing: 0.035em;
+  color: var(--ink-muted);
+}
+
+.empire-card {
+  border-radius: 3px 14px 3px 14px;
+  padding: 10px;
+  border-color: transparent;
+}
+
+.empire-card:hover {
+  border-color: rgb(195 167 121 / 0.48);
+  background: rgb(239 224 199 / 0.5);
+}
+
+.empire-card.is-active {
+  border-color: var(--line-strong);
+  background:
+    linear-gradient(90deg, rgb(36 91 114 / 0.1), transparent 34%),
+    var(--cream);
+  box-shadow: 0 10px 24px -20px rgb(46 41 35 / 0.55);
+}
+
+.empire-card.is-active::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--iran-lapis), var(--iran-turquoise));
+}
+
+.empire-card .thumb {
+  border-color: var(--line-strong);
+  border-radius: 2px 10px 2px 10px;
+  box-shadow: 0 5px 14px -10px rgb(46 41 35 / 0.5);
+}
+
+.btn-primary,
+.btn-outline {
+  border-radius: 4px 12px 4px 12px;
+  font-weight: 650;
+}
+
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--terracotta), #b86247);
+  box-shadow: 0 8px 18px -12px rgb(120 56 46 / 0.8);
+}
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: auto 14px 4px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(255 225 159 / 0.75), transparent);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--terracotta-deep), var(--terracotta));
+}
+
+.btn-outline {
+  border-color: var(--line-strong);
+  background: rgb(255 250 240 / 0.75);
+}
+
+.btn-outline:hover {
+  border-color: var(--iran-lapis);
+  color: var(--iran-lapis-deep);
+  background: rgb(36 91 114 / 0.045);
+}
+
+.atlas-scroll::-webkit-scrollbar-thumb {
+  background: #cdb58f;
+  border-color: var(--paper);
+}
+
+.atlas-scroll {
+  scrollbar-color: #cdb58f transparent;
+}
+
+/* ── Selected peak panel ───────────────────────────────────────── */
+.iranian-local-name {
+  direction: rtl;
+  unicode-bidi: isolate;
+  color: var(--iran-lapis);
+  font-weight: 780;
+}
+
+.iranian-hero-frame {
+  position: relative;
+  border-radius: 3px 16px 3px 16px !important;
+  border-color: var(--line-strong) !important;
+  background: var(--paper-deep) !important;
+  box-shadow: inset 0 0 0 4px rgb(255 250 240 / 0.55);
+}
+
+.iranian-hero-frame::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgb(195 146 63 / 0.35);
+  border-radius: 2px 11px 2px 11px;
+  pointer-events: none;
+}
+
+.iranian-facts > div {
+  position: relative;
+}
+
+.iranian-facts > div::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  flex: none;
+  margin-right: 2px;
+  background: var(--iran-saffron);
+  transform: rotate(45deg);
+  opacity: 0.72;
+}
+
+/* ── Mobile drawer: shaded alley / portal feeling ──────────────── */
+.overlay-backdrop {
+  background: rgb(37 29 23 / 0.48);
+  backdrop-filter: blur(5px) saturate(0.9);
+}
+
+.iranian-drawer {
+  position: relative;
+  border-right: 1px solid var(--line-strong);
+  background:
+    linear-gradient(180deg, rgb(36 91 114 / 0.035), transparent 16%),
+    var(--paper) !important;
+  box-shadow: 18px 0 46px -26px rgb(34 27 21 / 0.65) !important;
+}
+
+.iranian-drawer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  opacity: 0.5;
+  background: repeating-linear-gradient(180deg, var(--iran-lapis) 0 8px, var(--iran-saffron) 8px 12px, var(--terracotta) 12px 18px, transparent 18px 24px);
+  pointer-events: none;
+}
+
+/* ── Legacy hotspots, modals and educational surfaces ──────────── */
+.hs-pin .core {
+  background: var(--terracotta);
+}
+
+.hs-pin .rim {
+  border-color: rgb(255 248 234 / 0.96);
+  background: rgb(36 91 114 / 0.16);
+  box-shadow: 0 1px 3px rgb(46 41 35 / 0.32), inset 0 0 0 1px rgb(195 146 63 / 0.52);
+}
+
+.hs-pin .pulse {
+  border-color: rgb(36 91 114 / 0.48);
+}
+
+.hs-tip {
+  border-color: var(--line-strong);
+  border-radius: 3px 14px 3px 14px;
+  background: rgb(255 250 240 / 0.97);
+}
+
+.hs-tip::after {
+  background: rgb(255 250 240 / 0.97);
+  border-color: var(--line-strong);
+}
+
+.modal-panel {
+  border-radius: 4px 22px 4px 22px;
+  box-shadow: 0 28px 84px -24px rgb(36 28 22 / 0.52);
+}
+
+.quiz-choice,
+.artifact-card {
+  border-radius: 3px 14px 3px 14px;
+}
+
+.quiz-choice:hover:not(:disabled),
+.artifact-card:hover {
+  border-color: var(--iran-lapis);
+  background: rgb(36 91 114 / 0.035);
+}
+
+.tl-track {
+  background: var(--line);
+}
+
+.tl-fill {
+  background: linear-gradient(90deg, var(--iran-lapis), var(--iran-turquoise), var(--iran-saffron));
+}
+
+/* ── MapLibre controls: same material system as the rest of site ─ */
+.maplibre-viewer {
+  border-color: var(--line-strong);
+  background:
+    radial-gradient(circle at 50% 12%, rgb(109 159 161 / 0.32), transparent 38%),
+    linear-gradient(180deg, #9eaaa7 0%, #c7c8bb 54%, #8c978d 100%);
+}
+
+.maplibre-viewer .maplibregl-ctrl-group {
+  border-color: rgb(230 215 191 / 0.5);
+  border-radius: 3px 12px 3px 12px;
+  background: rgb(31 48 48 / 0.78);
+  box-shadow: 0 10px 24px -14px rgb(13 20 20 / 0.54);
+  backdrop-filter: blur(14px) saturate(0.92);
+}
+
+.maplibre-viewer .maplibregl-ctrl-attrib {
+  border-top-left-radius: 10px;
+  background: rgb(255 250 240 / 0.84);
+  color: var(--ink-soft);
+  font-family: "Estedad Variable", Tahoma, sans-serif;
+}
+
+.maplibre-viewer .maplibregl-ctrl-scale {
+  border-color: rgb(255 248 234 / 0.88);
+  background: rgb(31 63 67 / 0.66);
+  font-family: "Estedad Variable", Tahoma, sans-serif;
+}
+
+.maplibre-quality-badge {
+  border-color: rgb(236 219 191 / 0.48);
+  border-radius: 3px 14px 3px 14px;
+  background: rgb(25 63 80 / 0.88);
+  box-shadow: 0 10px 24px -15px rgb(13 23 26 / 0.65);
+  font-family: "Estedad Variable", Tahoma, sans-serif;
+}
+
+.maplibre-quality-dot {
+  background: #84b97c;
+  box-shadow: 0 0 0 3px rgb(132 185 124 / 0.17);
+}
+
+.maplibre-viewer-tools {
+  border-color: rgb(232 217 194 / 0.46);
+  border-radius: 3px 14px 3px 14px;
+  background: rgb(36 44 41 / 0.78);
+  box-shadow: 0 10px 28px -16px rgb(13 19 18 / 0.66);
+  backdrop-filter: blur(14px) saturate(0.9);
+}
+
+.maplibre-viewer-tools button,
+.maplibre-legacy-link {
+  border-color: rgb(232 217 194 / 0.28);
+  border-radius: 2px 9px 2px 9px;
+  background: rgb(255 248 234 / 0.08);
+  font-family: "Estedad Variable", Tahoma, sans-serif;
+  font-weight: 590;
+}
+
+.maplibre-viewer-tools button:hover,
+.maplibre-legacy-link:hover {
+  border-color: rgb(195 146 63 / 0.62);
+  background: rgb(195 146 63 / 0.15);
+}
+
+.maplibre-route-name {
+  color: rgb(255 244 223 / 0.72);
+  font-family: "Estedad Variable", Tahoma, sans-serif;
+}
+
+.maplibre-peak-marker {
+  width: 18px;
+  height: 18px;
+  border-color: #fff7e6;
+  box-shadow:
+    0 3px 12px rgb(0 0 0 / 0.42),
+    0 0 0 3px rgb(195 146 63 / 0.22),
+    inset 0 0 0 2px rgb(255 248 234 / 0.18);
+}
+
+.maplibre-peak-marker--summit { background: var(--iran-saffron); }
+.maplibre-peak-marker--shelter { background: var(--iran-lapis); }
+.maplibre-peak-marker--landmark { background: var(--iran-turquoise); }
+.maplibre-peak-marker--hazard { background: var(--terracotta); }
+.maplibre-peak-marker--water { background: var(--iran-water); }
+.maplibre-peak-marker--route { background: #c97043; }
+
+.maplibre-viewer .maplibregl-popup-content {
+  border: 1px solid var(--line-strong);
+  border-radius: 3px 15px 3px 15px;
+  background: var(--surface);
+  box-shadow: 0 16px 34px -18px rgb(31 27 23 / 0.5);
+  font-family: "Estedad Variable", Tahoma, sans-serif;
+}
+
+.maplibre-popup-kicker {
+  color: var(--iran-lapis);
+}
+
+.maplibre-popup-content {
+  color: var(--ink);
+}
+
+.maplibre-popup-content p {
+  color: var(--ink-soft);
+}
+
+.maplibre-popup-elevation {
+  color: #8d642a;
+}
+
+/* ── Small-screen restraint: keep ornament away from the terrain ─ */
+@media (max-width: 1279px) {
+  .iranian-shell::before {
+    opacity: 0.26;
+  }
+}
+
+@media (max-width: 639px) {
+  .iranian-header {
+    min-height: 66px;
+  }
+
+  .iranian-shell::after {
+    top: 64px;
+    opacity: 0.55;
+  }
+
+  .iranian-brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .iranian-brand-fa {
+    font-size: 1.06rem;
+  }
+
+  .iranian-brand-en {
+    margin-top: 0.2rem;
+    font-size: 0.57rem;
+    letter-spacing: 0.055em;
+  }
+
+  .atlas-card {
+    border-radius: 3px 14px 3px 14px;
+  }
+
+  .maplibre-viewer-tools {
+    right: 10px;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iranian-shell::after,
+  .iranian-brand-mark,
+  .atlas-card,
+  .empire-card,
+  .nav-item {
+    transition: none !important;
+  }
+}
