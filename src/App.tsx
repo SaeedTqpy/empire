@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { PeakLibrary } from "@/components/PeakLibrary";
 import { PeakInfoPanel } from "@/components/PeakInfoPanel";
 import { Viewer } from "@/components/Viewer";
+import { MapLibrePeakViewer } from "@/components/MapLibrePeakViewer";
 import { CloseIcon } from "@/components/icons";
 import { peakToViewerModel } from "@/lib/peak-viewer-adapter";
 
@@ -25,6 +26,10 @@ export default function App() {
   });
 
   const viewerModel = useMemo(() => peakToViewerModel(viewerPeak), [viewerPeak]);
+  const legacyRenderer = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("renderer") === "legacy" || params.get("renderer") === "three" || params.get("streaming") === "0";
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -40,6 +45,10 @@ export default function App() {
   useEffect(() => {
     document.title = `${panelPeak.name} — Iran 3D Peaks`;
   }, [panelPeak.name]);
+
+  useEffect(() => {
+    if (!legacyRenderer) setPanelPeak(viewerPeak);
+  }, [legacyRenderer, viewerPeak]);
 
   const selectPeak = useCallback(
     (id: string) => {
@@ -80,16 +89,20 @@ export default function App() {
         </aside>
 
         <main className="flex min-w-0 flex-1">
-          <Viewer
-            empire={viewerModel}
-            routes={viewerPeak.routes}
-            terrainManifestPath={viewerPeak.terrain.manifestPath}
-            onSwap={(model) => setPanelPeak(peakById(model.id))}
-            reducedMotion={reducedMotion}
-            animating={animating}
-            focusHotspot={null}
-            onFocusHandled={() => undefined}
-          />
+          {legacyRenderer ? (
+            <Viewer
+              empire={viewerModel}
+              routes={viewerPeak.routes}
+              terrainManifestPath={viewerPeak.terrain.manifestPath}
+              onSwap={(model) => setPanelPeak(peakById(model.id))}
+              reducedMotion={reducedMotion}
+              animating={animating}
+              focusHotspot={null}
+              onFocusHandled={() => undefined}
+            />
+          ) : (
+            <MapLibrePeakViewer peak={viewerPeak} reducedMotion={reducedMotion} animating={animating} />
+          )}
         </main>
 
         <aside className="hidden w-[330px] flex-none xl:flex">
