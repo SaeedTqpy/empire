@@ -25,7 +25,10 @@ export const damavand: Peak = {
     lon: 52.1097,
   },
 
-  modelPath: "/models/damavand.glb",
+  // Keep a version token on generated assets. Vite serves files from /public
+  // at stable paths, and browsers can otherwise keep an older GLB after a
+  // terrain/imagery rebuild because the filename itself did not change.
+  modelPath: "/models/damavand.glb?v=phase3-sentinel-20260812",
   terrain: {
     manifestPath: "/models/damavand.terrain.json",
     imageryManifestPath: "/models/damavand.imagery.json",
@@ -55,8 +58,8 @@ export const damavand: Peak = {
   hotspots: [],
 
   media: {
-    thumbnail: "/img/peaks/damavand-sentinel.webp",
-    hero: "/img/peaks/damavand-sentinel.webp",
+    thumbnail: "/img/peaks/damavand-sentinel.webp?v=phase3-sentinel-20260812",
+    hero: "/img/peaks/damavand-sentinel.webp?v=phase3-sentinel-20260812",
   },
 
   keywords: ["damavand", "دماوند", "iran", "alborz", "mountain", "volcano", "peak", "terrain", "dem", "sentinel-2"],
