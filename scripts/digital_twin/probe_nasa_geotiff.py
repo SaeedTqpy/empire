@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import shutil
 import tempfile
 import urllib.request
@@ -66,18 +67,36 @@ def request_bytes(url: str) -> tuple[bytes, str]:
 
 def discover_geotiff(page_url: str) -> str:
     payload, final_url = request_bytes(page_url)
+    html = payload.decode("utf-8", errors="replace")
     parser = LinkParser()
-    parser.feed(payload.decode("utf-8", errors="replace"))
+    parser.feed(html)
     candidates: list[str] = []
     for href, text in parser.links:
         marker = f"{text} {href}".lower()
         if "geotiff" in marker or ".tif" in marker or ".tiff" in marker:
             candidates.append(urljoin(final_url, href))
+
+    # Some versions of the JSC page expose the download through JavaScript or
+    # a form instead of a plain anchor. Capture URL-looking strings around the
+    # GeoTIFF markup as a second, conservative discovery path.
     if not candidates:
-        raise SystemExit("NASA/JSC page did not expose a GeoTIFF download link")
-    # Prefer the anchor explicitly labelled as a GeoTIFF download.
-    candidates.sort(key=lambda value: ("geotiff" not in value.lower(), len(value)))
-    return candidates[0]
+        for match in re.finditer(r"geotiff", html, flags=re.IGNORECASE):
+            snippet = html[max(0, match.start() - 900) : min(len(html), match.end() + 1400)]
+            print("--- NASA GeoTIFF markup ---", flush=True)
+            print(snippet, flush=True)
+            for quoted in re.findall(r"[\"']([^\"']+)[\"']", snippet):
+                lower = quoted.lower()
+                if "geotiff" in lower or ".tif" in lower or ".tiff" in lower:
+                    if not lower.startswith(("javascript:", "#")):
+                        candidates.append(urljoin(final_url, quoted.replace("&amp;", "&")))
+
+    if not candidates:
+        raise SystemExit("NASA/JSC page advertised a GeoTIFF but no downloadable endpoint could be resolved")
+
+    unique = list(dict.fromkeys(candidates))
+    unique.sort(key=lambda value: (not value.lower().endswith((".tif", ".tiff", ".zip")), len(value)))
+    print("NASA GeoTIFF candidates:", *unique, sep="\n  - ", flush=True)
+    return unique[0]
 
 
 def materialize_raster(download_url: str, work_dir: Path) -> tuple[Path, str, int]:
@@ -98,10 +117,9 @@ def materialize_raster(download_url: str, work_dir: Path) -> tuple[Path, str, in
                 shutil.copyfileobj(source, destination)
         return target, final_url, size
 
-    # TIFF byte order signatures: II*\0 or MM\0*.
     if payload[:4] not in (b"II*\x00", b"MM\x00*"):
-        head = payload[:120].decode("utf-8", errors="replace")
-        raise SystemExit(f"GeoTIFF link returned an unsupported payload: {head!r}")
+        head = payload[:240].decode("utf-8", errors="replace")
+        raise SystemExit(f"GeoTIFF candidate returned an unsupported payload from {final_url}: {head!r}")
     tif = work_dir / "nasa-geotiff.tif"
     raw_path.replace(tif)
     return tif, final_url, size
@@ -131,7 +149,7 @@ def main() -> None:
     args = parser.parse_args()
 
     geotiff_url = discover_geotiff(args.page)
-    print(f"NASA GeoTIFF link: {geotiff_url}", flush=True)
+    print(f"Selected NASA GeoTIFF endpoint: {geotiff_url}", flush=True)
 
     with tempfile.TemporaryDirectory(prefix="damavand-nasa-") as tmp:
         raster_path, final_download_url, download_bytes = materialize_raster(geotiff_url, Path(tmp))
