@@ -4,6 +4,8 @@
  * and assets, not changes to the viewer or the page shell.
  */
 
+import type { PeakRoute } from "./route";
+
 export type Vec3 = [number, number, number];
 
 export interface PeakCoordinates {
@@ -90,6 +92,7 @@ export interface Peak {
 
   facts: PeakFact[];
   hotspots: PeakHotspot[];
+  routes: PeakRoute[];
   media: PeakMedia;
   keywords: string[];
 }
