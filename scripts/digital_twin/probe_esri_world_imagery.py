@@ -32,7 +32,7 @@ def get_json(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
 def collect_layer_urls(node: Any, output: list[tuple[str, str]]) -> None:
     if isinstance(node, dict):
         url = node.get("url")
-        title = node.get("title") or node.get("name") or "unnamed"
+        title = node.get("title") or node.get("name") or node.get("id") or "unnamed"
         if isinstance(url, str) and ("FeatureServer" in url or "MapServer" in url):
             output.append((str(title), url))
         for value in node.values():
@@ -46,7 +46,6 @@ def feature_query_url(service_url: str) -> str | None:
     clean = service_url.rstrip("/")
     if "/FeatureServer/" in clean or "/MapServer/" in clean:
         return clean + "/query"
-    # Service roots can expose multiple sublayers. Caller expands those first.
     return None
 
 
@@ -56,17 +55,24 @@ def expand_service(title: str, url: str) -> list[tuple[str, str]]:
         return [(title, clean)]
     try:
         service = get_json(clean, {"f": "json"})
-    except Exception as exc:  # source probe should continue across optional layers
+    except Exception as exc:
         print(f"Could not inspect {clean}: {exc}", flush=True)
         return []
     layers = service.get("layers") or []
-    return [(f"{title} / {layer.get('name', layer.get('id'))}", f"{clean}/{layer['id']}") for layer in layers if "id" in layer]
+    tables = service.get("tables") or []
+    children = [*layers, *tables]
+    return [
+        (f"{title} / {layer.get('name', layer.get('id'))}", f"{clean}/{layer['id']}")
+        for layer in children
+        if "id" in layer
+    ]
 
 
 def parse_resolution(attrs: dict[str, Any]) -> float | None:
     likely = [
         "SRC_RES", "src_res", "RESOLUTION", "Resolution", "resolution",
-        "GSD", "gsd", "PIXEL_SIZE", "PixelSize", "pixel_size",
+        "GSD", "gsd", "PIXEL_SIZE", "PixelSize", "pixel_size", "MinPS",
+        "minps", "MinPixelSize", "BestRes", "best_res",
     ]
     for key in likely:
         value = attrs.get(key)
@@ -91,12 +97,30 @@ def main() -> None:
     data = get_json(item_url + "/data", {"f": "json"})
 
     discovered: list[tuple[str, str]] = []
+    # Feature-layer items commonly put the service URL on the item itself,
+    # while Web Maps put it in /data. Probe both representations.
+    collect_layer_urls(item, discovered)
     collect_layer_urls(data, discovered)
-    # De-duplicate while preserving order.
+
+    direct_url = item.get("url")
+    if isinstance(direct_url, str) and direct_url.startswith("http"):
+        discovered.append((str(item.get("title") or ITEM_ID), direct_url))
+
     discovered = list(dict.fromkeys(discovered))
+    print("ArcGIS item:", json.dumps({
+        "id": item.get("id"),
+        "title": item.get("title"),
+        "type": item.get("type"),
+        "url": item.get("url"),
+        "typeKeywords": item.get("typeKeywords"),
+    }, indent=2), flush=True)
+    print("Discovered services:", *[f"{title}: {url}" for title, url in discovered], sep="\n  - ", flush=True)
+
     expanded: list[tuple[str, str]] = []
     for title, url in discovered:
         expanded.extend(expand_service(title, url))
+    expanded = list(dict.fromkeys(expanded))
+    print("Expanded layers:", *[f"{title}: {url}" for title, url in expanded], sep="\n  - ", flush=True)
 
     records: list[dict[str, Any]] = []
     lon, lat = SUMMIT
@@ -118,6 +142,9 @@ def main() -> None:
         except Exception as exc:
             print(f"Query failed for {layer_url}: {exc}", flush=True)
             continue
+        if payload.get("error"):
+            print(f"ArcGIS query error for {layer_url}: {payload['error']}", flush=True)
+            continue
         for feature in payload.get("features") or []:
             attrs = feature.get("attributes") or {}
             records.append({
@@ -135,8 +162,11 @@ def main() -> None:
         "source": "Esri World Imagery Wayback metadata",
         "item_id": ITEM_ID,
         "item_title": item.get("title"),
+        "item_type": item.get("type"),
+        "item_service_url": item.get("url"),
         "item_url": item_url,
         "summit_wgs84": {"lon": lon, "lat": lat},
+        "discovered_services": discovered,
         "layer_count": len(expanded),
         "records_at_summit": len(records),
         "qualifying_under_10m": len(qualifying),
