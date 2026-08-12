@@ -1,11 +1,11 @@
 import type { Peak } from "@/types/peak";
 
 /**
- * Damavand is the reference peak for the terrain + imagery pipeline.
+ * Damavand is the reference peak for the terrain + imagery + route pipeline.
  *
- * Phase 2 created the real 30×30 km DEM mesh. Phase 3 keeps that geometry
- * intact and adds a georeferenced Sentinel-2 true-colour material plus a
- * mountain daylight scene profile.
+ * Phase 2 created the real 30×30 km DEM mesh. Phase 3 added georeferenced
+ * Sentinel-2 true-colour imagery. Phase 5 projects climbing routes against the
+ * exact same terrain coordinate contract.
  */
 export const damavand: Peak = {
   id: "damavand",
@@ -13,7 +13,7 @@ export const damavand: Peak = {
   localName: "دماوند",
   subtitle: "Iran's highest mountain",
   description:
-    "Explore Mount Damavand as a real 30 km terrain model, textured with georeferenced Copernicus Sentinel-2 imagery and ready for routes, shelters and mountain landmarks.",
+    "Explore Mount Damavand as a real 30 km terrain model with Sentinel-2 imagery, 3D climbing routes and terrain-aware mountain intelligence.",
 
   elevationM: 5610,
   prominenceM: 4667,
@@ -51,16 +51,35 @@ export const damavand: Peak = {
     { label: "Mountain range", value: "Alborz", icon: "range" },
     { label: "Location", value: "Mazandaran, Iran", icon: "location" },
     { label: "Terrain", value: "30 km real DEM", icon: "type" },
-    { label: "Imagery", value: "Sentinel-2 true colour", icon: "status" },
+    { label: "Routes", value: "3D + GPX import", icon: "status" },
   ],
 
-  // Geo-aware hotspots are added once route projection is introduced.
+  // Geo-aware hotspots arrive in Phase 6. Route geometry itself is geo-aware
+  // now and clamps to the production DEM at runtime.
   hotspots: [],
+
+  routes: [
+    {
+      id: "south-reference",
+      name: "South Route",
+      localName: "مسیر جنوبی",
+      description: "Reference visualization of the classic south-side ascent from Goosfand Sara through Bargah Sevom toward the summit.",
+      dataPath: "/routes/damavand-south.json?v=phase5-20260812",
+      color: "#ef5b32",
+      sourceLabel: "South route reference",
+      attribution: "© OpenStreetMap contributors · landmark controls from Damavand GPS Waypoints",
+      safetyNote: "Reference visualization only — not turn-by-turn navigation. Verify current mountain conditions and your navigation source before climbing.",
+      referenceMetrics: {
+        distanceKm: 8.0,
+        ascentM: 2630,
+      },
+    },
+  ],
 
   media: {
     thumbnail: "/img/peaks/damavand-sentinel.webp?v=phase3-sentinel-20260812",
     hero: "/img/peaks/damavand-sentinel.webp?v=phase3-sentinel-20260812",
   },
 
-  keywords: ["damavand", "دماوند", "iran", "alborz", "mountain", "volcano", "peak", "terrain", "dem", "sentinel-2"],
+  keywords: ["damavand", "دماوند", "iran", "alborz", "mountain", "volcano", "peak", "terrain", "dem", "sentinel-2", "gpx", "route"],
 };
