@@ -1,0 +1,37 @@
+name: Probe Phase 8 Esri Wayback Runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - phase8-digital-twin-build
+    paths:
+      - "scripts/digital_twin/probe_esri_wayback_runtime.py"
+      - ".github/workflows/probe-phase8-esri-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve Wayback runtime service
+        run: |
+          python scripts/digital_twin/probe_esri_wayback_runtime.py \
+            --output .cache/digital-twin/esri-wayback-runtime.json
+
+      - name: Upload source report
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase8-esri-wayback-runtime-report
+          path: .cache/digital-twin/esri-wayback-runtime.json
+          if-no-files-found: error
