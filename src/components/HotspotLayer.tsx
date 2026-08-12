@@ -13,6 +13,7 @@ interface Props {
   onHover: (id: string | null) => void;
   onActivate: (id: string | null) => void;
   visible: boolean;
+  categoryFilter: string | null;
 }
 
 const TIP_W = 224;
@@ -35,16 +36,22 @@ export const HotspotLayer = memo(function HotspotLayer({
   onHover,
   onActivate,
   visible,
+  categoryFilter,
 }: Props) {
   const tipRef = useRef<HTMLDivElement>(null);
   const pinRefs = useRef(new Map<string, HTMLElement>());
   const size = useRef({ w: 0, h: 0 });
   const lastState = useRef(new Map<string, number>());
 
-  /* world positions, allocated once per empire and rewritten in place */
+  const visibleHotspots = useMemo(
+    () => (categoryFilter ? empire.hotspots.filter((hotspot) => hotspot.category === categoryFilter) : empire.hotspots),
+    [empire, categoryFilter],
+  );
+
+  /* world positions, allocated once per visible marker and rewritten in place */
   const anchors = useMemo(
-    () => empire.hotspots.map((hs) => ({ id: hs.id, world: new THREE.Vector3() })),
-    [empire],
+    () => visibleHotspots.map((hs) => ({ id: hs.id, world: new THREE.Vector3() })),
+    [visibleHotspots],
   );
 
   /* stage size is read on resize, never per frame */
@@ -70,12 +77,12 @@ export const HotspotLayer = memo(function HotspotLayer({
       const { w, h } = size.current;
       if (!w || !h) return;
 
-      for (let i = 0; i < empire.hotspots.length; i++) {
-        const hs = empire.hotspots[i];
+      for (let i = 0; i < visibleHotspots.length; i++) {
+        const hs = visibleHotspots[i];
         const el = pinRefs.current.get(hs.id);
         if (!el) continue;
         // one world-space resolve per pin per frame, shared with occlusion
-        const world = engine.anchorToWorld(hs.anchor, anchors[i].world);
+        const world = engine.hotspotToWorld(hs, anchors[i].world);
         const p = engine.project(world, w, h);
         const occluded = p.behindCamera || engine.isOccluded(hs.id);
         const isActive = activeId === hs.id;
@@ -116,7 +123,7 @@ export const HotspotLayer = memo(function HotspotLayer({
     return () => {
       off();
     };
-  }, [engine, empire, anchors, activeId, hoverId, visible]);
+  }, [engine, visibleHotspots, anchors, activeId, hoverId, visible]);
 
   /* pins arrive as the dwelling settles */
   useEffect(() => {
@@ -136,7 +143,7 @@ export const HotspotLayer = memo(function HotspotLayer({
     };
   }, [empire.id, visible]);
 
-  const hovered = empire.hotspots.find((h) => h.id === hoverId) ?? null;
+  const hovered = visibleHotspots.find((h) => h.id === hoverId) ?? null;
 
   return (
     /* kept mounted while hidden so the pins fade with the dwelling rather
@@ -144,13 +151,14 @@ export const HotspotLayer = memo(function HotspotLayer({
     <div
       className={`hs-layer pointer-events-none absolute inset-0 z-20 ${visible ? "" : "is-hidden"}`}
       aria-hidden={!visible}
-      aria-label="Architectural markers"
+      aria-label="Mountain markers"
     >
-      {empire.hotspots.map((hs) => (
+      {visibleHotspots.map((hs) => (
         <button
           key={hs.id}
           className="hs-pin"
           data-hs={hs.id}
+          data-category={hs.category}
           ref={(el) => {
             if (el) pinRefs.current.set(hs.id, el);
             else {

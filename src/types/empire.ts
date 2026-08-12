@@ -15,10 +15,12 @@ export interface Hotspot {
   short: string;
   /** longer educational description shown when activated */
   detail: string;
-  category: "structure" | "roof" | "court" | "entrance" | "interior" | "artifact-zone" | "facade";
+  category: "structure" | "roof" | "court" | "entrance" | "interior" | "artifact-zone" | "facade" | "summit" | "shelter" | "landmark" | "hazard" | "water" | "route";
   /** Placed against the model's bounding box; the viewer snaps it onto the
    *  nearest real surface so the pin sits on the building, not in the air. */
   anchor: Vec3;
+  /** Phase 6 geographic placement for real terrain peaks. */
+  geo?: { lat: number; lon: number; elevationM?: number; sourceLabel?: string };
   /** Which kind of surface the pin belongs on. The viewer resolves this
    *  against the model's own geometry, so a pin lands on the feature it
    *  names whatever the dwelling's shape:

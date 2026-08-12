@@ -1,10 +1,22 @@
-import type { Peak } from "@/types/peak";
+import type { Peak, PeakHotspot, Vec3 } from "@/types/peak";
 import type { Empire } from "@/types/empire";
 
+const EARTH_RADIUS_M = 6_371_008.8;
+
+function hotspotFallbackAnchor(peak: Peak, hotspot: PeakHotspot): Vec3 {
+  if (hotspot.anchor) return hotspot.anchor;
+  if (!hotspot.coordinates) return [0.5, 0.5, 0.5];
+  const extentM = peak.terrain.extentKm * 1000;
+  const centerLatRad = (peak.coordinates.lat * Math.PI) / 180;
+  const eastM = EARTH_RADIUS_M * Math.cos(centerLatRad) * (((hotspot.coordinates.lon - peak.coordinates.lon) * Math.PI) / 180);
+  const northM = EARTH_RADIUS_M * (((hotspot.coordinates.lat - peak.coordinates.lat) * Math.PI) / 180);
+  const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+  return [clamp01(0.5 + eastM / extentM), 0.5, clamp01(0.5 + northM / extentM)];
+}
+
 /**
- * Temporary phase-1 boundary between the new Peak domain and the untouched
- * Empire viewer engine. Keeping the adapter here lets the domain migrate
- * cleanly without destabilizing the rendering stack before the DEM arrives.
+ * Temporary compatibility boundary while the old viewer types are retired.
+ * Peak semantics, including Phase 6 geo markers, stay intact across it.
  */
 export function peakToViewerModel(peak: Peak): Empire {
   return {
@@ -23,8 +35,16 @@ export function peakToViewerModel(peak: Peak): Empire {
       title: hotspot.title,
       short: hotspot.short,
       detail: hotspot.detail,
-      category: "structure",
-      anchor: hotspot.anchor,
+      category: hotspot.category,
+      anchor: hotspotFallbackAnchor(peak, hotspot),
+      geo: hotspot.coordinates
+        ? {
+            lat: hotspot.coordinates.lat,
+            lon: hotspot.coordinates.lon,
+            elevationM: hotspot.elevationM,
+            sourceLabel: hotspot.sourceLabel,
+          }
+        : undefined,
       focus: hotspot.focus,
     })),
     interior: emptySection("Terrain View"),

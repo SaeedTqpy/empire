@@ -89,8 +89,6 @@ export default function App() {
             animating={animating}
             focusHotspot={null}
             onFocusHandled={() => undefined}
-            onArtifacts={() => undefined}
-            onTimeline={() => undefined}
           />
         </main>
 

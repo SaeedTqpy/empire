@@ -45,7 +45,13 @@ export interface PeakHotspot {
   short: string;
   detail: string;
   category: PeakHotspotCategory;
-  anchor: Vec3;
+  /** Optional legacy normalized fallback for non-georeferenced models. */
+  anchor?: Vec3;
+  /** Preferred Phase 6 placement: WGS84 lat/lon raycast onto the terrain. */
+  coordinates?: PeakCoordinates;
+  /** Reference metadata only; rendered Y comes from the DEM surface. */
+  elevationM?: number;
+  sourceLabel?: string;
   focus?: number;
 }
 

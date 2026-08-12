@@ -21,7 +21,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
 import gsap from "gsap";
-import type { Empire, Vec3 } from "@/types/empire";
+import type { Empire, Hotspot, Vec3 } from "@/types/empire";
 import type { CameraMode } from "@/types/viewer-camera";
 import type { GeoRoutePoint, RouteMetrics, TerrainGeoReference } from "@/types/route";
 
@@ -136,6 +136,9 @@ export class ViewerEngine {
   private routeMetrics: RouteMetrics | null = null;
   private routeBounds: THREE.Box3 | null = null;
   private routeVisible = true;
+  /** Geo marker positions are static for a loaded DEM; resolve each once. */
+  private geoHotspotLocal = new Map<string, THREE.Vector3>();
+  private hotspotRay = new THREE.Raycaster();
   private reducedMotion = false;
   private ready = false;
 
@@ -584,6 +587,7 @@ export class ViewerEngine {
     const old = this.current;
     if (old && old.empireId !== model.empireId) this.stage.remove(old.group);
     this.clearRouteMesh();
+    this.geoHotspotLocal.clear();
     this.current = model;
     this.occlusionCache.clear();
     this.attach(model);
@@ -987,6 +991,48 @@ export class ViewerEngine {
     return this.current.group.localToWorld(out);
   }
 
+  private resolveGeoHotspotLocal(hotspot: Hotspot): THREE.Vector3 | null {
+    const model = this.current;
+    const reference = this.terrainGeoRef;
+    if (!model || !reference || !hotspot.geo) return null;
+    const key = `${model.empireId}:${hotspot.id}:${hotspot.geo.lat.toFixed(7)}:${hotspot.geo.lon.toFixed(7)}`;
+    const cached = this.geoHotspotLocal.get(key);
+    if (cached) return cached;
+
+    const centerLatRad = THREE.MathUtils.degToRad(reference.centerLat);
+    const xPhysical = EARTH_RADIUS_M * Math.cos(centerLatRad) * THREE.MathUtils.degToRad(hotspot.geo.lon - reference.centerLon);
+    const zPhysical = EARTH_RADIUS_M * THREE.MathUtils.degToRad(hotspot.geo.lat - reference.centerLat);
+    const x = xPhysical * model.normalizationScale + model.normalizationOffset.x;
+    const z = zPhysical * model.normalizationScale + model.normalizationOffset.z;
+
+    model.group.updateMatrixWorld(true);
+    const originLocal = new THREE.Vector3(x, model.size.y + 0.55, z);
+    const originWorld = model.group.localToWorld(originLocal.clone());
+    this.hotspotRay.set(originWorld, DOWN);
+    this.hotspotRay.near = 0;
+    this.hotspotRay.far = model.size.y + 1.2;
+    this.hotspotRay.firstHitOnly = true;
+    const hit = this.hotspotRay.intersectObjects(model.meshes, false)[0];
+    if (!hit) return null;
+
+    const local = model.group.worldToLocal(hit.point.clone());
+    // Marker pin: a small physical lift from the DEM surface, independent of
+    // normalized presentation scale.
+    local.y += 18 * model.normalizationScale;
+    this.geoHotspotLocal.set(key, local.clone());
+    return local;
+  }
+
+  hotspotToWorld(hotspot: Hotspot, out = new THREE.Vector3()): THREE.Vector3 {
+    if (!this.current) return out.set(0, 0, 0);
+    const geoLocal = this.resolveGeoHotspotLocal(hotspot);
+    if (geoLocal) {
+      out.copy(geoLocal);
+      return this.current.group.localToWorld(out);
+    }
+    return this.anchorToWorld(hotspot.anchor, out);
+  }
+
   project(world: THREE.Vector3, w: number, h: number): AnchorProjection {
     const v = this.projScratch.copy(world);
     const distance = v.distanceTo(this.camera.position);
@@ -1034,6 +1080,7 @@ export class ViewerEngine {
   /* ── geospatial route system ──────────────────────────────────── */
   setTerrainGeoReference(reference: TerrainGeoReference) {
     this.terrainGeoRef = reference;
+    this.geoHotspotLocal.clear();
     return this.rebuildRouteOverlay();
   }
 
@@ -1491,6 +1538,36 @@ export class ViewerEngine {
     });
   }
 
+  focusHotspot(hotspot: Hotspot, empire: Empire, dur = 1.15) {
+    if (!this.current) return;
+    this.killCameraMotion();
+    this.cameraInterrupted = true;
+    this.cameraMode = "focus";
+    if (this.controls) this.controls.autoRotate = false;
+    const world = this.hotspotToWorld(hotspot);
+    const focus = THREE.MathUtils.clamp(hotspot.focus ?? 1, 0.72, 1.2);
+    const margin = THREE.MathUtils.clamp(0.68 / focus, 0.48, 0.8);
+    this.cameraTween = gsap.to(this.camState, {
+      dist: THREE.MathUtils.clamp(this.fitDistance(empire, margin), this.controls.minDistance, this.controls.maxDistance),
+      tx: world.x,
+      ty: world.y + 0.035,
+      tz: world.z,
+      az: this.camState.az,
+      el: THREE.MathUtils.clamp(this.camState.el, 24, 58),
+      duration: this.reducedMotion ? 0 : dur,
+      ease: "power3.inOut",
+      onUpdate: () => this.applyCam(),
+      onComplete: () => {
+        this.cameraTween = null;
+        this.cameraMode = "manual";
+        if (this.controls) this.controls.autoRotate = this.userAutoRotate;
+      },
+      onInterrupt: () => {
+        this.cameraTween = null;
+      },
+    });
+  }
+
   resetPeakView(empire: Empire, animate = true) {
     this.stopCinematic();
     this.cameraInterrupted = true;
@@ -1593,6 +1670,19 @@ export class ViewerEngine {
       return;
     }
     const world = this.anchorToWorld(anchor);
+    this.glowShell.scale.setScalar(1);
+    this.glowShell.position.copy(this.stage.worldToLocal(world.clone()));
+    this.glowShell.visible = true;
+  }
+
+  setHotspotHighlight(hotspot: Hotspot | null) {
+    if (!this.glowShell) return;
+    if (!hotspot) {
+      this.glowShell.visible = false;
+      return;
+    }
+    const world = this.hotspotToWorld(hotspot);
+    this.glowShell.scale.setScalar(hotspot.geo ? 0.34 : 1);
     this.glowShell.position.copy(this.stage.worldToLocal(world.clone()));
     this.glowShell.visible = true;
   }

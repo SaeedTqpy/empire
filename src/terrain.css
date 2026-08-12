@@ -47,3 +47,128 @@
     font-size: 9px;
   }
 }
+
+/* Phase 6 geo-aware mountain markers */
+.hotspot-filter {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 31;
+  display: flex;
+  max-width: min(72%, 620px);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.hotspot-filter__chip {
+  border: 1px solid rgb(255 255 255 / 0.56);
+  border-radius: 999px;
+  background: rgb(36 52 58 / 0.62);
+  padding: 6px 9px;
+  color: rgb(248 250 248 / 0.9);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  backdrop-filter: blur(7px);
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.hotspot-filter__chip:hover,
+.hotspot-filter__chip.is-on {
+  transform: translateY(-1px);
+  border-color: rgb(255 255 255 / 0.9);
+  background: rgb(29 44 49 / 0.86);
+}
+
+.hotspot-filter__chip span {
+  margin-left: 3px;
+  opacity: 0.65;
+}
+
+.hs-pin[data-category="summit"] .core { background: #f6b73c; }
+.hs-pin[data-category="shelter"] .core { background: #4c8fbd; }
+.hs-pin[data-category="landmark"] .core { background: #9b72c7; }
+.hs-pin[data-category="hazard"] .core { background: #d9584c; }
+.hs-pin[data-category="water"] .core { background: #38a3c7; }
+.hs-pin[data-category="route"] .core { background: #dd7d3c; }
+
+.hotspot-detail {
+  border-top-width: 3px;
+  border-top-color: #788c94;
+}
+.hotspot-detail[data-category="summit"] { border-top-color: #f6b73c; }
+.hotspot-detail[data-category="shelter"] { border-top-color: #4c8fbd; }
+.hotspot-detail[data-category="landmark"] { border-top-color: #9b72c7; }
+.hotspot-detail[data-category="hazard"] { border-top-color: #d9584c; }
+.hotspot-detail[data-category="water"] { border-top-color: #38a3c7; }
+.hotspot-detail[data-category="route"] { border-top-color: #dd7d3c; }
+
+.hotspot-detail__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.hotspot-detail__meta > div {
+  min-width: 0;
+  border: 1px solid rgb(104 119 123 / 0.2);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.3);
+  padding: 8px 10px;
+}
+
+.hotspot-detail__meta span,
+.hotspot-detail__meta strong {
+  display: block;
+}
+
+.hotspot-detail__meta span {
+  color: rgb(84 97 100 / 0.76);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hotspot-detail__meta strong {
+  margin-top: 3px;
+  overflow: hidden;
+  color: rgb(37 48 50 / 0.94);
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hotspot-detail__source {
+  margin-top: 10px;
+  border-top: 1px solid rgb(104 119 123 / 0.18);
+  padding-top: 8px;
+  color: rgb(84 97 100 / 0.68);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+@media (max-width: 639px) {
+  .hotspot-filter {
+    top: 8px;
+    right: 8px;
+    left: 72px;
+    max-width: none;
+    gap: 4px;
+  }
+
+  .hotspot-filter__chip {
+    padding: 5px 7px;
+    font-size: 8px;
+  }
+
+  .hotspot-detail__meta {
+    grid-template-columns: 1fr;
+  }
+}

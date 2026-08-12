@@ -1,4 +1,5 @@
 import type { Peak } from "@/types/peak";
+import { damavandHotspots } from "./damavand-hotspots";
 
 /**
  * Damavand is the reference peak for the terrain + imagery + route pipeline.
@@ -54,9 +55,8 @@ export const damavand: Peak = {
     { label: "Routes", value: "3D + GPX import", icon: "status" },
   ],
 
-  // Geo-aware hotspots arrive in Phase 6. Route geometry itself is geo-aware
-  // now and clamps to the production DEM at runtime.
-  hotspots: [],
+  // Phase 6 markers use WGS84 coordinates and are raycast onto the DEM.
+  hotspots: damavandHotspots,
 
   routes: [
     {

@@ -12,8 +12,6 @@ import {
   ZoomOutIcon,
   PanIcon,
   LayersIcon,
-  VaseIcon,
-  TimelineIcon,
   ResetIcon,
   BulbIcon,
   CloseIcon,
@@ -33,8 +31,6 @@ interface ViewerProps {
   animating: boolean;
   focusHotspot: string | null;
   onFocusHandled: () => void;
-  onArtifacts: () => void;
-  onTimeline: () => void;
   onPrefetchReady?: (prefetch: (e: Empire) => void) => void;
 }
 
@@ -50,8 +46,6 @@ export const Viewer = memo(function Viewer({
   animating,
   focusHotspot,
   onFocusHandled,
-  onArtifacts,
-  onTimeline,
   onPrefetchReady,
 }: ViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,6 +63,7 @@ export const Viewer = memo(function Viewer({
   const layersRef = useRef<HTMLDivElement>(null);
   const [layers, setLayers] = useState({ labels: true, routes: true, grid: false, wire: false, xray: false });
   const [tipVisible, setTipVisible] = useState(true);
+  const [hotspotFilter, setHotspotFilter] = useState<string | null>(null);
   const [routeMetrics, setRouteMetrics] = useState<RouteMetrics | null>(null);
   const [routeName, setRouteName] = useState(routes[0]?.name ?? "Mountain route");
   const [routeImported, setRouteImported] = useState(false);
@@ -76,6 +71,7 @@ export const Viewer = memo(function Viewer({
   const loadingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeHs = empire.hotspots.find((h) => h.id === activeId) ?? null;
+  const hotspotCategories = [...new Set(empire.hotspots.map((hotspot) => hotspot.category))];
   const builtInRoute = routes[0] ?? null;
 
   /* ── engine lifecycle ── */
@@ -179,6 +175,7 @@ export const Viewer = memo(function Viewer({
       currentEmpireRef.current = next;
       setActiveId(null);
       setHoverId(null);
+      setHotspotFilter(null);
       setMarkersVisible(false);
 
       if (loadingTimer.current) clearTimeout(loadingTimer.current);
@@ -235,10 +232,10 @@ export const Viewer = memo(function Viewer({
     const engine = engineRef.current;
     if (!engine || !engineReady) return;
     if (activeHs) {
-      engine.focusAnchor(activeHs.anchor, empire);
-      engine.setHighlight(activeHs.anchor);
+      engine.focusHotspot(activeHs, empire);
+      engine.setHotspotHighlight(activeHs);
     } else {
-      engine.setHighlight(null);
+      engine.setHotspotHighlight(null);
     }
   }, [activeId, engineReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -336,7 +333,37 @@ export const Viewer = memo(function Viewer({
         onHover={setHoverId}
         onActivate={setActiveId}
         visible={markersVisible && layers.labels}
+        categoryFilter={hotspotFilter}
       />
+
+      {empire.hotspots.length > 0 && (
+        <div className="hotspot-filter" role="group" aria-label="Filter mountain markers">
+          <button
+            className={`hotspot-filter__chip ${hotspotFilter === null ? "is-on" : ""}`}
+            onClick={() => {
+              setActiveId(null);
+              setHoverId(null);
+              setHotspotFilter(null);
+            }}
+          >
+            All <span>{empire.hotspots.length}</span>
+          </button>
+          {hotspotCategories.map((category) => (
+            <button
+              key={category}
+              data-category={category}
+              className={`hotspot-filter__chip ${hotspotFilter === category ? "is-on" : ""}`}
+              onClick={() => {
+                setActiveId(null);
+                setHoverId(null);
+                setHotspotFilter(hotspotFilter === category ? null : category);
+              }}
+            >
+              {category.replace("-", " ")}
+            </button>
+          ))}
+        </div>
+      )}
 
       {builtInRoute && (
         <RoutePanel
@@ -393,14 +420,6 @@ export const Viewer = memo(function Viewer({
               </div>
             )}
           </div>
-          <button className="tool-btn" onClick={onArtifacts}>
-            <VaseIcon />
-            <span>Artifacts</span>
-          </button>
-          <button className="tool-btn" onClick={onTimeline}>
-            <TimelineIcon />
-            <span>Timeline</span>
-          </button>
           <div className="my-1 h-px w-9 bg-line-warm" />
           <button className="tool-btn" onClick={resetView}>
             <ResetIcon />
@@ -411,7 +430,8 @@ export const Viewer = memo(function Viewer({
 
       {activeHs && (
         <div
-          className="atlas-card absolute bottom-4 left-1/2 z-30 w-[min(430px,calc(100%-140px))] -translate-x-1/2 !rounded-2xl p-4"
+          className="atlas-card hotspot-detail absolute bottom-4 left-1/2 z-30 w-[min(460px,calc(100%-140px))] -translate-x-1/2 !rounded-2xl p-4"
+          data-category={activeHs.category}
           role="dialog"
           aria-label={activeHs.title}
         >
@@ -425,7 +445,20 @@ export const Viewer = memo(function Viewer({
             </button>
           </div>
           <p className="font-display mt-2 text-[0.98rem] italic leading-snug text-ink-muted">{activeHs.short}</p>
+          {activeHs.geo && (
+            <div className="hotspot-detail__meta">
+              <div>
+                <span>Reference elevation</span>
+                <strong>{activeHs.geo.elevationM ? `${activeHs.geo.elevationM.toLocaleString()} m` : "DEM surface"}</strong>
+              </div>
+              <div>
+                <span>Coordinates</span>
+                <strong>{activeHs.geo.lat.toFixed(5)}, {activeHs.geo.lon.toFixed(5)}</strong>
+              </div>
+            </div>
+          )}
           <p className="mt-2 text-[0.86rem] leading-relaxed text-ink-soft">{activeHs.detail}</p>
+          {activeHs.geo?.sourceLabel && <p className="hotspot-detail__source">Source: {activeHs.geo.sourceLabel}</p>}
         </div>
       )}
 
@@ -441,7 +474,7 @@ export const Viewer = memo(function Viewer({
             </button>
           </div>
           <p className="font-display mt-1.5 text-[0.88rem] italic leading-snug text-ink-soft">
-            The route is clamped to the DEM. Import a GPX to compare your own track in 3D.
+            Click a mountain marker to fly to its real DEM position. Use the chips above to isolate summits, shelters, water, landmarks and hazards.
           </p>
         </div>
       )}
@@ -465,7 +498,7 @@ export const Viewer = memo(function Viewer({
             <div className="mt-3 h-[3px] w-full overflow-hidden rounded-full bg-line-warm">
               <div className="h-full rounded-full bg-terracotta transition-all duration-300" style={{ width: `${loading.pct}%` }} />
             </div>
-            <p className="loading-fact font-display mt-3 text-[0.85rem] italic text-ink-muted">Preparing terrain, imagery and route layers…</p>
+            <p className="loading-fact font-display mt-3 text-[0.85rem] italic text-ink-muted">Preparing terrain, imagery, routes and mountain markers…</p>
           </div>
         </div>
       )}
