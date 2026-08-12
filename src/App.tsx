@@ -12,7 +12,7 @@ const mq = (query: string) => (typeof window !== "undefined" ? window.matchMedia
 
 export default function App() {
   const [viewerPeak, setViewerPeak] = useState(() => peakById(DEFAULT_PEAK_ID));
-  const [panelPeak, setPanelPeak] = useState(() => peakById(DEFAULT_PEAK_ID));
+  const [legacyPanelPeak, setLegacyPanelPeak] = useState(() => peakById(DEFAULT_PEAK_ID));
   const [animating, setAnimating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeNav, setActiveNav] = useState("explore");
@@ -30,6 +30,7 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     return params.get("renderer") === "legacy" || params.get("renderer") === "three" || params.get("streaming") === "0";
   }, []);
+  const panelPeak = legacyRenderer ? legacyPanelPeak : viewerPeak;
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -45,10 +46,6 @@ export default function App() {
   useEffect(() => {
     document.title = `${panelPeak.name} — Iran 3D Peaks`;
   }, [panelPeak.name]);
-
-  useEffect(() => {
-    if (!legacyRenderer) setPanelPeak(viewerPeak);
-  }, [legacyRenderer, viewerPeak]);
 
   const selectPeak = useCallback(
     (id: string) => {
@@ -94,14 +91,19 @@ export default function App() {
               empire={viewerModel}
               routes={viewerPeak.routes}
               terrainManifestPath={viewerPeak.terrain.manifestPath}
-              onSwap={(model) => setPanelPeak(peakById(model.id))}
+              onSwap={(model) => setLegacyPanelPeak(peakById(model.id))}
               reducedMotion={reducedMotion}
               animating={animating}
               focusHotspot={null}
               onFocusHandled={() => undefined}
             />
           ) : (
-            <MapLibrePeakViewer peak={viewerPeak} reducedMotion={reducedMotion} animating={animating} />
+            <MapLibrePeakViewer
+              key={`${viewerPeak.id}-${reducedMotion ? "reduced" : "motion"}`}
+              peak={viewerPeak}
+              reducedMotion={reducedMotion}
+              animating={animating}
+            />
           )}
         </main>
 
