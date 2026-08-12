@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Search OpenAerialMap for genuinely high-resolution Damavand imagery."""
+"""Search OpenAerialMap for genuinely high-resolution Damavand imagery.
+
+The probe is source-discovery only: a catalog hit still has to pass raster
+georeferencing, overlap and measured-resolution validation before ingestion.
+"""
 
 from __future__ import annotations
 
