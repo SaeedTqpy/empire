@@ -1,0 +1,233 @@
+import * as THREE from "three";
+import { ImageOverlayPlugin, XYZTilesOverlay } from "3d-tiles-renderer/plugins";
+import type { TerrainDetailImageryConfig } from "@/types/streaming";
+
+const EARTH_RADIUS_M = 6_371_008.8;
+
+interface OverlayProjection {
+  toNormalizedPoint(lonRadians: number, latRadians: number): [number, number];
+}
+
+interface RuntimeOverlay {
+  isReady: boolean;
+  projection: OverlayProjection;
+  whenReady(): Promise<void>;
+  lockTextureSafe(range: number[]): unknown;
+  setRegionVisible(range: number[], visible: boolean): void;
+  hasContent(range: number[]): boolean;
+}
+
+interface OverlayMeshInfo {
+  attribute: THREE.BufferAttribute;
+}
+
+interface OverlayTileInfo {
+  range: number[] | null;
+  target: THREE.Texture | null;
+  meshInfo: Map<THREE.Mesh, OverlayMeshInfo>;
+  failed: boolean;
+}
+
+interface OverlayInfoEntry {
+  controller: AbortController;
+  tileInfo: Map<object, OverlayTileInfo>;
+}
+
+interface TilesInternals {
+  group: THREE.Group;
+  visibleTiles: Set<object>;
+}
+
+interface PluginInternals {
+  overlays: object[];
+  tiles: TilesInternals;
+  overlayInfo: Map<object, OverlayInfoEntry>;
+  tileControllers: Map<object, AbortController>;
+  _fetchTileOverlayTexture(tile: object, overlay: object, info: OverlayTileInfo): Promise<void>;
+}
+
+interface ProjectedMesh {
+  mesh: THREE.Mesh;
+  values: number[];
+}
+
+function rangesIntersect(
+  a: [number, number, number, number],
+  b: [number, number, number, number],
+) {
+  return !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]);
+}
+
+/**
+ * The stock image overlay plugin assumes geometry is either ECEF or can be
+ * transformed to the image projection with one affine Matrix4. Damavand's
+ * terrain uses a deliberately simple local metric frame instead:
+ *
+ *   X = east metres, Z = north metres around the peak centre.
+ *
+ * A single affine local→WebMercator transform drifts by metres over a 30 km
+ * footprint. This small specialization keeps the stock tile fetch/composition,
+ * material wrapping, cache and virtual splitting machinery, but derives each
+ * vertex's lon/lat exactly from the same geographic contract used by the DEM.
+ * The resulting lon/lat is then passed through the overlay's real WebMercator
+ * projection before UVs are generated.
+ */
+export class DamavandGeographicImageOverlayPlugin extends ImageOverlayPlugin {
+  private readonly centerLatRad: number;
+  private readonly centerLonRad: number;
+  private readonly metersPerLonRad: number;
+  private readonly coverage: TerrainDetailImageryConfig["coverageBboxWgs84"];
+
+  constructor(
+    options: ConstructorParameters<typeof ImageOverlayPlugin>[0],
+    config: TerrainDetailImageryConfig,
+  ) {
+    super(options);
+    this.centerLatRad = THREE.MathUtils.degToRad(config.centerLat);
+    this.centerLonRad = THREE.MathUtils.degToRad(config.centerLon);
+    this.metersPerLonRad = EARTH_RADIUS_M * Math.cos(this.centerLatRad);
+    this.coverage = config.coverageBboxWgs84;
+  }
+
+  /** Runtime override of ImageOverlayPlugin's internal projection hook. */
+  async _initTileSceneOverlayInfo(
+    scene: THREE.Object3D,
+    tileValue: object,
+    overlayValue?: object | object[],
+  ): Promise<unknown> {
+    const internal = this as unknown as PluginInternals;
+    const requested = overlayValue ?? internal.overlays;
+    if (Array.isArray(requested)) {
+      return Promise.all(requested.map((overlay) => this._initTileSceneOverlayInfo(scene, tileValue, overlay)));
+    }
+
+    const overlayObject = requested;
+    const overlay = overlayObject as RuntimeOverlay;
+    const entry = internal.overlayInfo.get(overlayObject);
+    const tileController = internal.tileControllers.get(tileValue);
+    if (!entry || !tileController) return;
+
+    if (!overlay.isReady) await overlay.whenReady();
+    if (entry.controller.signal.aborted || tileController.signal.aborted) return;
+
+    scene.updateMatrixWorld(true);
+    internal.tiles.group.updateMatrixWorld(true);
+
+    const meshes: THREE.Mesh[] = [];
+    scene.traverse((object) => {
+      if ((object as THREE.Mesh).isMesh) meshes.push(object as THREE.Mesh);
+    });
+    if (meshes.length === 0) return;
+
+    const groupInverse = internal.tiles.group.matrixWorld.clone().invert();
+    const local = new THREE.Vector3();
+    const matrix = new THREE.Matrix4();
+    const projected: ProjectedMesh[] = [];
+
+    let minU = Infinity;
+    let minV = Infinity;
+    let maxU = -Infinity;
+    let maxV = -Infinity;
+    let minHeight = Infinity;
+    let maxHeight = -Infinity;
+    let minLonDeg = Infinity;
+    let minLatDeg = Infinity;
+    let maxLonDeg = -Infinity;
+    let maxLatDeg = -Infinity;
+
+    for (const mesh of meshes) {
+      matrix.copy(mesh.matrixWorld).premultiply(groupInverse);
+      const position = mesh.geometry.getAttribute("position");
+      if (!position) continue;
+
+      const values: number[] = [];
+      for (let index = 0; index < position.count; index += 1) {
+        local.fromBufferAttribute(position, index).applyMatrix4(matrix);
+
+        const lonRad = this.centerLonRad + local.x / this.metersPerLonRad;
+        const latRad = this.centerLatRad + local.z / EARTH_RADIUS_M;
+        const [u, v] = overlay.projection.toNormalizedPoint(lonRad, latRad);
+        values.push(u, v, local.y);
+
+        minU = Math.min(minU, u);
+        minV = Math.min(minV, v);
+        maxU = Math.max(maxU, u);
+        maxV = Math.max(maxV, v);
+        minHeight = Math.min(minHeight, local.y);
+        maxHeight = Math.max(maxHeight, local.y);
+
+        const lonDeg = THREE.MathUtils.radToDeg(lonRad);
+        const latDeg = THREE.MathUtils.radToDeg(latRad);
+        minLonDeg = Math.min(minLonDeg, lonDeg);
+        minLatDeg = Math.min(minLatDeg, latDeg);
+        maxLonDeg = Math.max(maxLonDeg, lonDeg);
+        maxLatDeg = Math.max(maxLatDeg, latDeg);
+      }
+      projected.push({ mesh, values });
+    }
+
+    if (!Number.isFinite(minU) || !Number.isFinite(minV)) return;
+
+    const computedRange = [minU, minV, maxU, maxV];
+    const tileGeoBounds: [number, number, number, number] = [minLonDeg, minLatDeg, maxLonDeg, maxLatDeg];
+    const inValidatedCoverage = !this.coverage || rangesIntersect(tileGeoBounds, this.coverage);
+    const tileInfo = entry.tileInfo.get(tileValue);
+    if (!tileInfo) return;
+
+    const range = tileInfo.range ?? computedRange;
+    if (tileInfo.range === null) tileInfo.range = range;
+
+    if (inValidatedCoverage) {
+      overlay.lockTextureSafe(range);
+      if (internal.tiles.visibleTiles.has(tileValue)) overlay.setRegionVisible(range, true);
+      if (overlay.hasContent(range)) {
+        await internal._fetchTileOverlayTexture(tileValue, overlayObject, tileInfo);
+      }
+    }
+
+    const du = Math.max(1e-15, range[2] - range[0]);
+    const dv = Math.max(1e-15, range[3] - range[1]);
+    const dh = Math.max(1e-9, maxHeight - minHeight);
+
+    for (const { mesh, values } of projected) {
+      for (let index = 0; index < values.length; index += 3) {
+        values[index] = (values[index] - range[0]) / du;
+        values[index + 1] = (values[index + 1] - range[1]) / dv;
+        values[index + 2] = (values[index + 2] - minHeight) / dh;
+      }
+      tileInfo.meshInfo.set(mesh, {
+        attribute: new THREE.BufferAttribute(new Float32Array(values), 3),
+      });
+    }
+  }
+}
+
+export function createDamavandVhrOverlay(
+  config: TerrainDetailImageryConfig,
+  renderer: THREE.WebGLRenderer,
+) {
+  const url = config.tileTemplate
+    .replaceAll("{level}", "{z}")
+    .replaceAll("{row}", "{y}")
+    .replaceAll("{col}", "{x}");
+
+  const overlay = new XYZTilesOverlay({
+    url,
+    levels: config.maxZoom + 1,
+    tileDimension: 256,
+    projection: "EPSG:3857",
+    opacity: 1,
+  });
+
+  const plugin = new DamavandGeographicImageOverlayPlugin(
+    {
+      overlays: [overlay],
+      renderer,
+      resolution: 1024,
+      enableTileSplitting: true,
+    },
+    config,
+  );
+
+  return { overlay, plugin };
+}
