@@ -2,44 +2,92 @@
 
 Interactive 3D mountain atlas for Iran, starting with **Mount Damavand**.
 
-The product direction is a real-terrain experience: DEM-derived mountain geometry, satellite imagery, cinematic camera movement, climbing routes, shelters and mountain landmarks — now backed by camera-driven spatial LOD streaming.
+The product direction is a real-terrain experience: DEM-derived mountain geometry, georeferenced imagery, cinematic camera movement, climbing routes, shelters and mountain landmarks — backed by camera-driven spatial LOD streaming.
 
-## Current status — Phase 7 complete
+## Current status — Phase 8 complete
 
-Damavand now combines real terrain, georeferenced satellite imagery, an interruptible cinematic camera, terrain-aware 3D climbing routes, geo-aware mountain markers, extreme close inspection, and a **3D Tiles 1.1 spatial streaming foundation**.
+Damavand now combines real terrain, a self-hosted Sentinel-2 fallback, an interruptible cinematic camera, terrain-aware 3D climbing routes, geo-aware mountain markers, 3D Tiles streaming, and a **validated sub-meter runtime imagery layer over the summit / south-side source footprint**.
 
-### Extreme-detail real terrain
+### Real terrain base
 
-- `Peak` is the product domain model under `src/types/peak.ts`
-- Damavand is the only product dataset rendered at runtime
 - represented area: **30 × 30 km** around the summit
 - source DEM: public Skadi/SRTM, four 3601 × 3601 HGT tiles
 - canonical source grid: **1025 × 1025 samples / 1,050,625 vertices / 2,097,152 terrain triangles**
-- horizontal source-grid spacing: roughly **29.3 m** across the 30 km footprint
+- source-grid spacing: roughly **29.3 m** across the 30 km footprint
 - vertical proportion: **1:1 physical scale**, no elevation exaggeration
-- sampled elevation inside the current build: roughly **877 m to 5,599 m**
+- sampled elevation in the current build: roughly **877 m to 5,599 m**
 
-The 1025 source grid is now the common high-detail terrain source for both the canonical fallback model and the Phase 7 tiled hierarchy.
+The elevation surface remains SRTM-derived. Phase 8 increases observed **imagery** fidelity; it does not misrepresent the terrain mesh as sub-meter elevation geometry.
 
-### Ultra-detail Sentinel-2 material
+### Sentinel-2 fallback
 
 - true-colour imagery uses Copernicus Sentinel-2 B04/B03/B02
-- imagery is reprojected to the exact terrain bbox
 - source RGB resolution recorded by the pipeline: **10 m**
 - authoring master: **4096 × 4096 lossless PNG**, about **7.32 m/output texel** across the 30 km footprint
 - browser delivery uses high-quality WebP and Draco-compressed geometry
 - current composite valid source coverage: **99.9657%** before residual edge repair
-- no AI/synthetic super-resolution is used in the accurate source profile
-- viewer sampling uses mipmaps, trilinear filtering and device-aware anisotropy up to 16×
-- extreme inspection uses a **0.018** OrbitControls minimum distance, zoom-to-cursor and a **0.002** camera near plane
-- the render budget allows up to **3 DPR / 12 million rendered pixels** before adaptive scaling
+- no AI/synthetic super-resolution is used
 - imagery attribution is rendered in-view
 
-An 8K or 16K upscale of the same 10 m source would not add observed ground detail. The next genuine quality jump belongs to Phase 8: higher-resolution real-world source data.
+Sentinel-2 remains the complete visual fallback under the Phase 8 high-detail region.
+
+### Phase 8 — Damavand Digital Twin imagery
+
+Phase 8 source discovery found a real higher-resolution source at the Damavand summit in **World Imagery (Wayback 2026-03-26)** metadata.
+
+Validated source record:
+
+- provider: **Vantor**
+- product: **Vivid**
+- source date: **2025-06-22**
+- observed source resolution (`SRC_RES`): **0.34 m**
+- sampled/delivered resolution (`SAMP_RES`): **0.6 m**
+- validated maximum map level: **18**
+- metadata feature: `OBJECTID 3154394`
+- source footprint contains the Damavand summit
+- source WGS84 bounds: `52.0312477, 35.6338357 → 52.1723191, 35.9580380`
+- footprint bounds intersect about **22.2212%** of the current 30 × 30 km Damavand terrain bbox
+
+This is deliberately described as a **summit / south-side VHR region**, not 0.6 m coverage for the whole mountain.
+
+Runtime behavior:
+
+```text
+Phase 7 3D Tiles terrain
+        ↓
+exact local metric X/Z → WGS84 lon/lat per vertex
+        ↓
+EPSG:3857 projection per vertex
+        ↓
+validated Wayback z0…z18 imagery stream
+        ↓
+VHR over the validated region
+        ↓
+Sentinel-2 everywhere else / on VHR failure
+```
+
+The implementation keeps `3d-tiles-renderer` image fetching, caching, material composition and virtual leaf splitting, while replacing only the geographic projection step required by Damavand's local metric terrain frame.
+
+The VHR source is **runtime-only**:
+
+- no Wayback/Vantor imagery is copied into `public/`
+- no VHR imagery is baked into GLBs
+- no offline tile export is produced
+- a CI guard fails if VHR assets are accidentally bundled
+- z18 is a hard fidelity ceiling even though the service exposes higher tile levels, because the matching Damavand metadata record declares `MaxMapLevel = 18`
+
+Viewer attribution includes Esri/Vantor/Earthstar/GIS User Community together with the Copernicus fallback attribution. See `DIGITAL_TWIN_SOURCES.md` for the exact source contract and deployment caveats.
+
+Comparison switches:
+
+```text
+?detail=0     disable Phase 8 VHR, keep 3D Tiles
+?streaming=0  use the canonical single-GLB fallback path
+```
 
 ### Spatial 3D Tiles streaming
 
-Phase 7 removes the monolithic visual-model bottleneck. The default Damavand presentation is now a **3D Tiles 1.1 `REPLACE` quadtree** selected from camera screen-space error.
+Phase 7 removed the monolithic visual-model bottleneck. Damavand uses a **3D Tiles 1.1 `REPLACE` quadtree** selected from camera screen-space error.
 
 ```text
 ViewerEngine
@@ -48,37 +96,21 @@ ViewerEngine
 │   ├── geo-hotspot terrain projection
 │   └── visual fallback if streaming cannot start
 └── TerrainTilesStreamer
-    └── 3D Tiles hierarchy
-        ├── L0: 1 whole-mountain tile
-        ├── L1: 4 quadrant tiles
-        └── L2: 16 near-field tiles
+    ├── L0: 1 whole-mountain tile
+    ├── L1: 4 quadrant tiles
+    └── L2: 16 near-field tiles
+         └── Phase 8 virtual image-detail splitting where VHR is available
 ```
 
-The validated starter dataset contains **21 visual tiles** plus one lightweight interaction proxy and is about **9.36 MiB** in total generated tile assets.
+The self-hosted hierarchy contains **21 visual tiles** plus one lightweight interaction proxy and is about **9.36 MiB** in generated tile assets.
 
-| LOD | Visual tiles | Terrain grid / tile | Texture / tile | Approx terrain spacing | Approx imagery texel |
+| LOD | Visual tiles | Terrain grid / tile | Embedded texture / tile | Approx terrain spacing | Approx embedded imagery texel |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | L0 | 1 | 129 × 129 | 512 × 512 | 234.4 m | 58.6 m |
 | L1 | 4 | 129 × 129 | 512 × 512 | 117.2 m | 29.3 m |
 | L2 | 16 | 257 × 257 | 1024 × 1024 | 29.3 m | 7.3 m |
 
-The L2 leaves preserve the useful detail of the previous 1025-grid / 4K monolithic build, but the detail is spatially partitioned. Moving closer causes higher-detail child tiles to replace their ancestors instead of keeping the maximum-detail mountain permanently resident.
-
-Runtime behavior:
-
-- `3d-tiles-renderer` performs camera-driven screen-space-error selection
-- ancestors remain available while higher-detail descendants load
-- request concurrency and LRU memory budgets adapt to `navigator.deviceMemory` when available
-- render resolution changes are propagated to the tile selector
-- loaded tile textures receive the viewer's mipmap / trilinear / anisotropic sampling policy
-- wireframe and x-ray modes are forwarded to streamed terrain
-- a compact viewer badge reports active LOD / visible-tile state
-- the full canonical `damavand.glb` remains an explicit fallback
-- `?streaming=0` forces the canonical single-GLB path for debugging/comparison
-
-The visual hierarchy and interaction proxy share the exact same metric coordinate contract and ViewerEngine normalization. Existing routes, imported GPX tracks, hotspots and camera focus behavior therefore do not depend on which visual tile happens to be resident.
-
-**Phase 7 is an architecture upgrade, not a claim of new observed terrain resolution.** Phase 8 can replace or deepen leaf content with commercial 30 cm imagery, sub-meter elevation, photogrammetry or LiDAR without changing the product boundary.
+Phase 8 does not duplicate the VHR imagery into this table; high-detail image tiles are requested only at runtime over the validated source region.
 
 ### Cinematic camera
 
@@ -89,59 +121,27 @@ loading → intro → cinematic → manual
                          ↘ focus → manual
 ```
 
-The first visit flies into Damavand's hero angle and performs a short orbit. Pointer, touch, wheel, keyboard or direct OrbitControls input cancels authored motion immediately. Camera state is synchronized back from OrbitControls so later zoom/focus/reset operations do not snap to stale coordinates. Reduced-motion users skip the intro/orbit.
+Pointer, touch, wheel, keyboard or direct OrbitControls input cancels authored motion immediately. Camera state is synchronized back from OrbitControls and reduced-motion users skip the intro/orbit.
 
 ### Terrain-aware routes
 
-Phase 5 introduced a reusable route layer rather than baking route geometry into terrain assets.
-
-The built-in **Damavand South Route** is generated at build time from OpenStreetMap path geometry. Published Damavand GPS landmarks act as corridor controls between Goosfand Sara, Bargah Sevom and the summit. The validated reference contains **167 geographic points**, and all ten landmark-to-landmark segments resolved through the OSM trail graph with **100% OSM corridor coverage** in that build. Its generated geometry is about **7.35 km**; the product card keeps the published reference headline of about **8.0 km / 2,630 m ascent** while DEM-derived metrics are used for terrain sampling.
+The built-in **Damavand South Route** is generated from OpenStreetMap path geometry plus published Damavand GPS landmarks. The validated reference contains **167 geographic points** and all ten landmark-to-landmark segments resolved through the OSM trail graph in that build.
 
 At runtime:
 
-- lat/lon is transformed with the same geographic coordinate contract used by the terrain builder
-- route points are densified and raycast downward onto the interaction terrain
-- the rendered tube is lifted by a tiny physical offset to avoid z-fighting
-- distance, DEM-sampled min/max elevation, ascent and descent are computed from the projected route
-- **Focus route** frames the route bounds with the Phase 4 camera system
-- the route can be shown/hidden from the route card or Layers menu
-- users can **Import GPX** directly in the browser; the file is parsed locally and is not uploaded by this implementation
-- imported GPX tracks use their own computed distance/ascent metrics and can be replaced with the built-in South Route at any time
+- lat/lon uses the same geographic coordinate contract as terrain
+- route points are densified and raycast onto the interaction terrain
+- distance, DEM-sampled min/max elevation, ascent and descent are computed from the route
+- **Focus route** frames the route with the Phase 4 camera system
+- users can import GPX locally in the browser; the file is not uploaded by this implementation
 
-The built-in line is a reference visualization, **not turn-by-turn navigation**. Route source, licensing and safety notes are documented in `ROUTE_ATTRIBUTION.md`.
+The built-in line is a reference visualization, **not turn-by-turn navigation**. See `ROUTE_ATTRIBUTION.md`.
 
 ### Geo-aware mountain markers
 
-Phase 6 promotes mountain hotspots from normalized model anchors to WGS84 geographic data.
+Phase 6 uses WGS84 mountain markers for summit, shelter, landmark, hazard, seasonal water and route context. Their visual elevation is resolved independently against the interaction DEM, so markers, GPX and streamed visual terrain remain in one geographic frame.
 
-The first Damavand marker set contains six categories:
-
-- **Summit** — Damavand Summit
-- **Shelter** — Bargah Sevom
-- **Landmark** — Sang-e Do Shakh
-- **Hazard context** — Upper Ridge / high-altitude context marker
-- **Water context** — Seasonal Watercourse
-- **Route context** — Goosfand Sara
-
-Marker coordinates reuse the same waypoint dataset that guides the Phase 5 South Route. Reference elevation remains metadata; visual Y is resolved independently from the interaction terrain.
-
-```text
-WGS84 lat/lon
-    ↓
-same terrain georeference used by routes
-    ↓
-normalized ViewerEngine coordinates
-    ↓
-downward raycast onto interaction DEM
-    ↓
-small physical lift
-    ↓
-projected HTML marker + occlusion handling
-```
-
-Resolved marker positions are cached. Clicking a marker uses the Phase 4 camera state system to focus its real terrain location. Active markers also get a terrain highlight.
-
-These markers are contextual visualization, not live conditions or navigation. Shelter status, water availability, hazards, weather, access and rescue information must be checked separately before a climb. Source and safety scope are documented in `HOTSPOT_ATTRIBUTION.md`.
+These markers are contextual visualization, not live mountain conditions. See `HOTSPOT_ATTRIBUTION.md`.
 
 ## Coordinate contract
 
@@ -153,7 +153,7 @@ UV  = west→east / south→north
 units = metres before ViewerEngine presentation normalization
 ```
 
-The canonical model, interaction proxy, streamed visual tiles, routes and geo hotspots preserve this same frame.
+The canonical model, interaction proxy, streamed visual tiles, routes, geo hotspots and Phase 8 VHR projection preserve this same frame.
 
 ## Reproducible pipelines
 
@@ -165,14 +165,12 @@ scripts/terrain/build_peak_terrain.py
 .github/workflows/build-damavand-terrain.yml
 ```
 
-Canonical terrain + satellite fallback:
+Canonical terrain + Sentinel fallback:
 
 ```text
 scripts/imagery/damavand.json
 scripts/imagery/build_sentinel_texture.py
 scripts/imagery/embed_texture.py
-scripts/imagery/apply_ultra_detail_code.py
-scripts/imagery/apply_extreme_detail_code.py
 .github/workflows/build-damavand-imagery.yml
 ```
 
@@ -181,37 +179,24 @@ Spatial streaming:
 ```text
 scripts/streaming/build_damavand_quadtree.py
 scripts/streaming/validate_streaming.py
-scripts/streaming/apply_phase7_code.py
 .github/workflows/apply-phase7-streaming.yml
 STREAMING_ARCHITECTURE.md
 ```
 
-The Phase 7 build samples the canonical 1025 DEM once, derives every LOD from that grid, crops imagery from the same georeferenced 4K lossless master, WebP-compresses textures, Draco-compresses geometry, validates the complete 1/4/16 hierarchy, then runs the TypeScript/Vite production build and ESLint before publishing.
-
-Cinematic camera:
+Digital Twin / VHR source gates:
 
 ```text
-scripts/camera/apply_phase4_code.py
-.github/workflows/apply-phase4-camera.yml
+scripts/digital_twin/probe_esri_world_imagery.py
+scripts/digital_twin/probe_esri_wayback_runtime.py
+scripts/digital_twin/probe_esri_wayback_tile.py
+scripts/digital_twin/validate_phase8_contract.py
+.github/workflows/probe-phase8-esri-imagery.yml
+.github/workflows/probe-phase8-esri-runtime.yml
+.github/workflows/validate-phase8-digital-twin.yml
+DIGITAL_TWIN_SOURCES.md
 ```
 
-Routes:
-
-```text
-scripts/routes/damavand-south.json
-scripts/routes/build_reference_route.py
-scripts/routes/apply_phase5_engine.py
-.github/workflows/apply-phase5-routes.yml
-```
-
-Mountain markers:
-
-```text
-src/data/peaks/damavand-hotspots.ts
-scripts/hotspots/apply_phase6_code.py
-.github/workflows/apply-phase6-hotspots.yml
-HOTSPOT_ATTRIBUTION.md
-```
+Other source probes are retained under `scripts/digital_twin/` so rejected/unavailable sources remain auditable instead of disappearing from project history.
 
 ## Development
 
@@ -227,6 +212,7 @@ Quality gates:
 ```bash
 npm run build
 npm run lint
+python scripts/digital_twin/validate_phase8_contract.py
 ```
 
 ## Roadmap
@@ -237,13 +223,13 @@ npm run lint
 4. ✅ **Camera & Cinematic Experience** — intro flight, interruptible orbit, canonical reset and reduced motion
 5. ✅ **Routes & Mountain Intelligence** — South Route, terrain projection, metrics, route focus/layers and local GPX import
 6. ✅ **Hotspots & Peak UI** — WGS84 summit/shelter/landmark/hazard/water/route markers, filtering and focus
-7. ✅ **3D Tiles + LOD + High-Res Streaming Foundation** — spatial 1/4/16 hierarchy, screen-space-error selection, adaptive cache policy, interaction proxy and canonical fallback
-8. ⏭ **Damavand Digital Twin / Maximum Detail** — plug genuinely higher-resolution imagery/elevation and targeted photogrammetry/LiDAR into the streaming hierarchy
-9. **Production Hardening** — GPU-native texture compression/KTX2, deeper cache/offline policy, mobile GPU profiling, dependency/security audit and automated runtime tests
+7. ✅ **3D Tiles + LOD + High-Res Streaming Foundation** — spatial hierarchy, SSE selection, cache policy, interaction proxy and canonical fallback
+8. ✅ **Damavand Digital Twin / Maximum Detail** — validated Vantor/Esri 0.34 m source / 0.6 m sampled summit imagery, exact per-vertex geographic drape, runtime-only z18 streaming and Sentinel fallback
+9. **Production Hardening** — GPU-native texture compression/KTX2, deeper cache policy, mobile GPU profiling, dependency/security audit and automated runtime tests
 
 ## Attribution
 
-Terrain-source attribution is documented in `TERRAIN_ATTRIBUTION.md`. Satellite-source attribution is documented in `IMAGERY_ATTRIBUTION.md`. Route-source attribution and safety notes are documented in `ROUTE_ATTRIBUTION.md`. Mountain marker source/safety scope is documented in `HOTSPOT_ATTRIBUTION.md`.
+Terrain-source attribution is documented in `TERRAIN_ATTRIBUTION.md`. Sentinel source attribution is documented in `IMAGERY_ATTRIBUTION.md`. Phase 8 high-detail source scope and terms are documented in `DIGITAL_TWIN_SOURCES.md`. Route source/safety notes are in `ROUTE_ATTRIBUTION.md`; mountain marker source/safety scope is in `HOTSPOT_ATTRIBUTION.md`.
 
 ## Upstream
 
