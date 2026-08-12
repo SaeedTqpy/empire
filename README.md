@@ -4,15 +4,15 @@ Interactive 3D mountain atlas for Iran, starting with **Mount Damavand**.
 
 The product direction is a real-terrain experience: DEM-derived mountain geometry, satellite imagery, cinematic camera movement, climbing routes, shelters and mountain landmarks.
 
-## Current status — Phase 3 complete
+## Current status — Phase 4 complete
 
-Damavand now renders as a real terrain model with geographically aligned satellite imagery and a mountain-specific daylight presentation.
+Damavand now renders as a real terrain model with geographically aligned satellite imagery, mountain-specific daylight presentation, and an interruptible cinematic camera experience.
 
 ### Real terrain
 
 - `Peak` is the product domain model under `src/types/peak.ts`
 - Damavand is the only product dataset rendered at runtime
-- the Three.js viewer loads `/models/damavand.glb`
+- the Three.js viewer loads the versioned `/models/damavand.glb` asset
 - terrain comes from public Skadi/SRTM elevation data
 - represented area: **30 × 30 km** around the summit
 - source DEM: four 3601 × 3601 HGT tiles
@@ -59,6 +59,40 @@ The original museum-style Empire lighting has been adapted for terrain:
 - terrain-specific control labels
 - in-view satellite attribution
 
+### Cinematic camera
+
+Phase 4 adds an explicit camera state machine in `src/types/viewer-camera.ts`:
+
+```text
+loading → intro → cinematic → manual
+                         ↘ focus → manual
+```
+
+The experience now includes:
+
+- an authored first-load flight from a wider, lower bearing into Damavand's canonical hero angle
+- a short GSAP-driven cinematic orbit after the arrival
+- immediate cancellation of authored camera motion on pointer, touch, wheel, keyboard zoom/orbit, or direct OrbitControls interaction
+- `OrbitControls` → camera-state synchronization so manual drag never causes the next zoom/focus/reset to snap back to stale coordinates
+- canonical animated Reset View behavior
+- hotspot focus as an explicit camera mode
+- reduced-motion support that skips intro/orbit and frames the mountain directly
+- the existing user-controlled **Start 3D orbit** mode remains available after the cinematic sequence
+
+The reproducible Phase 4 migration lives at:
+
+```text
+scripts/camera/apply_phase4_code.py
+```
+
+and is validated by:
+
+```text
+.github/workflows/apply-phase4-camera.yml
+```
+
+The workflow applies the camera migration, runs production build + ESLint, then publishes the validated viewer code back to `iran-peaks`.
+
 ## Architecture
 
 ```text
@@ -93,6 +127,8 @@ Draco geometry compression
 public/models/damavand.glb
         ↓
 Three.js ViewerEngine + mountain daylight profile
+        ↓
+intro flight → cinematic orbit → manual camera
 ```
 
 The geographic coordinate contract remains:
@@ -200,7 +236,7 @@ npm run lint
 1. ✅ **Foundation** — peak domain, Damavand-only runtime, stable viewer boundary
 2. ✅ **Real Terrain Pipeline** — production-density DEM → real terrain mesh → validated + compressed Damavand GLB
 3. ✅ **Satellite Material & Lighting** — georeferenced Sentinel-2 texture, PBR terrain material and mountain daylight presentation
-4. **Camera & Cinematic Experience** — intro flight, orbit, camera constraints and presets
+4. ✅ **Camera & Cinematic Experience** — intro flight, interruptible cinematic orbit, camera-state synchronization, canonical reset and reduced motion
 5. **Routes & Mountain Intelligence** — GPX routes projected onto terrain
 6. **Hotspots & Peak UI** — summit, shelters, landmarks, hazards and final product UI
 7. **Production Hardening** — LOD, GPU texture compression/KTX2, caching, mobile GPU handling, dependency audit and tests
