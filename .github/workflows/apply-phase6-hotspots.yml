@@ -1,0 +1,118 @@
+name: Apply Phase 6 Hotspots
+
+on:
+  push:
+    branches: [iran-peaks]
+    paths:
+      - scripts/hotspots/**
+      - src/data/peaks/damavand-hotspots.ts
+      - HOTSPOT_ATTRIBUTION.md
+      - .github/workflows/apply-phase6-hotspots.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  hotspots:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: iran-peaks
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply geo-aware marker migration
+        run: python3 scripts/hotspots/apply_phase6_code.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Validate marker dataset
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('src/data/peaks/damavand-hotspots.ts').read_text()
+          required = ['summit', 'shelter', 'landmark', 'hazard', 'water', 'route']
+          missing = [category for category in required if f'category: "{category}"' not in text]
+          if missing:
+              raise SystemExit(f'missing hotspot categories: {missing}')
+          count = text.count('coordinates: { lat:')
+          if count < 6:
+              raise SystemExit(f'expected >= 6 geo markers, found {count}')
+          print(f'geo markers={count}; categories={", ".join(required)}')
+          PY
+
+      - name: Publish Phase 6 marker code
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          tmp_dir="$(mktemp -d)"
+          mkdir -p \
+            "$tmp_dir/src/types" \
+            "$tmp_dir/src/lib" \
+            "$tmp_dir/src/data/peaks" \
+            "$tmp_dir/src/three" \
+            "$tmp_dir/src/components"
+
+          cp src/types/peak.ts "$tmp_dir/src/types/peak.ts"
+          cp src/types/empire.ts "$tmp_dir/src/types/empire.ts"
+          cp src/lib/peak-viewer-adapter.ts "$tmp_dir/src/lib/peak-viewer-adapter.ts"
+          cp src/data/peaks/damavand.ts "$tmp_dir/src/data/peaks/damavand.ts"
+          cp src/three/engine.ts "$tmp_dir/src/three/engine.ts"
+          cp src/components/HotspotLayer.tsx "$tmp_dir/src/components/HotspotLayer.tsx"
+          cp src/components/Viewer.tsx "$tmp_dir/src/components/Viewer.tsx"
+          cp src/components/PeakInfoPanel.tsx "$tmp_dir/src/components/PeakInfoPanel.tsx"
+          cp src/App.tsx "$tmp_dir/src/App.tsx"
+          cp src/terrain.css "$tmp_dir/src/terrain.css"
+
+          git fetch origin iran-peaks
+          git reset --hard origin/iran-peaks
+
+          cp "$tmp_dir/src/types/peak.ts" src/types/peak.ts
+          cp "$tmp_dir/src/types/empire.ts" src/types/empire.ts
+          cp "$tmp_dir/src/lib/peak-viewer-adapter.ts" src/lib/peak-viewer-adapter.ts
+          cp "$tmp_dir/src/data/peaks/damavand.ts" src/data/peaks/damavand.ts
+          cp "$tmp_dir/src/three/engine.ts" src/three/engine.ts
+          cp "$tmp_dir/src/components/HotspotLayer.tsx" src/components/HotspotLayer.tsx
+          cp "$tmp_dir/src/components/Viewer.tsx" src/components/Viewer.tsx
+          cp "$tmp_dir/src/components/PeakInfoPanel.tsx" src/components/PeakInfoPanel.tsx
+          cp "$tmp_dir/src/App.tsx" src/App.tsx
+          cp "$tmp_dir/src/terrain.css" src/terrain.css
+          rm -rf "$tmp_dir"
+
+          git add \
+            src/types/peak.ts \
+            src/types/empire.ts \
+            src/lib/peak-viewer-adapter.ts \
+            src/data/peaks/damavand.ts \
+            src/three/engine.ts \
+            src/components/HotspotLayer.tsx \
+            src/components/Viewer.tsx \
+            src/components/PeakInfoPanel.tsx \
+            src/App.tsx \
+            src/terrain.css
+
+          if git diff --cached --quiet; then
+            echo "Phase 6 hotspot code is already up to date."
+            exit 0
+          fi
+
+          git commit -m "feat(hotspots): add geo-aware Damavand peak intelligence"
+          git push origin HEAD:iran-peaks
