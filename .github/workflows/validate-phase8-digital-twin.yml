@@ -1,0 +1,46 @@
+name: Validate Phase 8 Digital Twin
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - phase8-digital-twin-build
+    paths:
+      - "src/**"
+      - "scripts/digital_twin/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/validate-phase8-digital-twin.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate source contract
+        run: python scripts/digital_twin/validate_phase8_contract.py
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
