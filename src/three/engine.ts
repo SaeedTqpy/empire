@@ -140,6 +140,7 @@ export class ViewerEngine {
   private geoHotspotLocal = new Map<string, THREE.Vector3>();
   private hotspotRay = new THREE.Raycaster();
   private reducedMotion = false;
+  private maxTextureAnisotropy = 8;
   private ready = false;
 
   onLoadProgress: ((pct: number) => void) | null = null;
@@ -171,13 +172,18 @@ export class ViewerEngine {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     await renderer.init();
     this.renderer = renderer;
+    const caps = (renderer as any).capabilities;
+    const reportedAnisotropy = caps?.getMaxAnisotropy?.();
+    this.maxTextureAnisotropy = Number.isFinite(reportedAnisotropy)
+      ? Math.max(1, Math.min(16, reportedAnisotropy))
+      : 8;
 
     const scene = new THREE.Scene();
     this.scene = scene;
 
     scene.fog = new THREE.Fog(0xc7d7df, 7.5, 22);
 
-    this.camera = new THREE.PerspectiveCamera(38, 1, 0.05, 60);
+    this.camera = new THREE.PerspectiveCamera(38, 1, 0.015, 60);
     this.camera.position.set(-1.7, 1.6, 2.4);
 
     // ── Image-based light: a warm gallery dome so PBR surfaces pick up
@@ -298,8 +304,10 @@ export class ViewerEngine {
     const controls = new OrbitControls(this.camera, this.canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
-    controls.minDistance = 1.1;
+    controls.minDistance = 0.32;
     controls.maxDistance = 6.5;
+    controls.zoomSpeed = 0.85;
+    controls.zoomToCursor = true;
     controls.maxPolarAngle = Math.PI * 0.52;
     controls.minPolarAngle = Math.PI * 0.12;
     controls.autoRotateSpeed = 0.9;
@@ -397,8 +405,8 @@ export class ViewerEngine {
     this.camera.updateProjectionMatrix();
     // Resolution budget: full DPR on modest canvases, scaled back on large
     // ones so a retina 2× never asks for more fragments than it can afford.
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const MAX_PIXELS = 3_500_000;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const MAX_PIXELS = 8_000_000;
     const wanted = w * h * dpr * dpr;
     const ratio = wanted > MAX_PIXELS ? Math.max(1, dpr * Math.sqrt(MAX_PIXELS / wanted)) : dpr;
     this.renderer.setPixelRatio(ratio);
@@ -543,12 +551,26 @@ export class ViewerEngine {
     };
   }
 
+  private tuneTexture(texture: THREE.Texture | null) {
+    if (!texture) return;
+    texture.anisotropy = this.maxTextureAnisotropy;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
+    texture.needsUpdate = true;
+  }
+
   /** TSL rim-light: a soft warm fresnel edge so the architecture reads
    *  against the parchment backdrop. Falls back silently to the
    *  original material if node patching fails. */
   private applyRim(mesh: THREE.Mesh) {
     try {
       const src = mesh.material as THREE.MeshStandardMaterial;
+      this.tuneTexture(src.map ?? null);
+      this.tuneTexture(src.normalMap ?? null);
+      this.tuneTexture((src as any).roughnessMap ?? null);
+      this.tuneTexture((src as any).metalnessMap ?? null);
+      this.tuneTexture((src as any).aoMap ?? null);
       const nm = new THREE.MeshStandardNodeMaterial();
       nm.color = src.color ? src.color.clone() : new THREE.Color(0xffffff);
       nm.map = src.map ?? null;

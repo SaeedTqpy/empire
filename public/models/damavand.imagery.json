@@ -9,6 +9,7 @@
     "datetime": "2026-06-01T00:00:00Z/2026-08-12T23:59:59Z",
     "max_cloud_cover": 20,
     "max_candidates": 40,
+    "native_ground_resolution_m": 10,
     "attribution": "Contains modified Copernicus Sentinel data 2026"
   },
   "bbox_wgs84": {
@@ -18,10 +19,13 @@
     "north": 36.086198054558686
   },
   "texture": {
-    "width": 2048,
-    "height": 2048,
-    "format": "image/jpeg",
-    "coverage_percent": 99.9655,
+    "width": 4096,
+    "height": 4096,
+    "master_format": "image/png",
+    "embedded_format": "image/webp",
+    "webp_quality": 95,
+    "ground_resolution_m_approx": 7.3242,
+    "coverage_percent": 99.9657,
     "orientation": "north-up; west-left; east-right; south-bottom",
     "embedded_in_model": "/models/damavand.glb"
   },
@@ -59,6 +63,8 @@
     "reprojection": "EPSG:4326 exact terrain bbox",
     "cloud_mask": "SCL classes 0,1,3,7,8,9,10 when available",
     "residual_nodata": "GDAL fillnodata after >=97% real source coverage",
+    "authoring_master": "lossless PNG before final WebP encoding",
+    "detail_policy": "native-detail preservation; no AI/synthetic super-resolution",
     "color": {
       "gain": 2.65,
       "black_point": 0.055,

@@ -311,11 +311,14 @@ def main() -> None:
     composite = repair_residual_nodata(composite)
 
     display = tone_map(composite, config)
-    image = Image.fromarray(np.rint(display * 255.0).astype(np.uint8), mode="RGB")
+    image = Image.fromarray(np.rint(display * 255.0).astype(np.uint8))
     image = image.filter(ImageFilter.UnsharpMask(radius=0.8, percent=55, threshold=3))
 
     args.texture.parent.mkdir(parents=True, exist_ok=True)
-    image.save(args.texture, format="JPEG", quality=int(output["jpeg_quality"]), optimize=True, progressive=True)
+    master_format = str(output.get("master_format", "png")).lower()
+    if master_format != "png":
+        raise SystemExit(f"Unsupported ultra-detail master format: {master_format}")
+    image.save(args.texture, format="PNG", optimize=True, compress_level=6)
 
     preview_width = int(output["preview_width"])
     preview_height = max(1, round(image.height * preview_width / image.width))
@@ -332,7 +335,10 @@ def main() -> None:
         "texture": {
             "width": width,
             "height": height,
-            "format": "image/jpeg",
+            "master_format": "image/png",
+            "embedded_format": "image/webp",
+            "webp_quality": int(output["webp_quality"]),
+            "ground_resolution_m_approx": round(float(terrain["extent_km"]) * 1000.0 / width, 4),
             "coverage_percent": round(coverage * 100.0, 4),
             "orientation": "north-up; west-left; east-right; south-bottom",
             "embedded_in_model": "/models/damavand.glb",
@@ -344,6 +350,8 @@ def main() -> None:
             "reprojection": "EPSG:4326 exact terrain bbox",
             "cloud_mask": "SCL classes 0,1,3,7,8,9,10 when available",
             "residual_nodata": "GDAL fillnodata after >=97% real source coverage",
+            "authoring_master": "lossless PNG before final WebP encoding",
+            "detail_policy": "native-detail preservation; no AI/synthetic super-resolution",
             "color": config["color"],
         },
         "attribution": source["attribution"],

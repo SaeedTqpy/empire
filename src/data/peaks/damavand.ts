@@ -29,7 +29,7 @@ export const damavand: Peak = {
   // Keep a version token on generated assets. Vite serves files from /public
   // at stable paths, and browsers can otherwise keep an older GLB after a
   // terrain/imagery rebuild because the filename itself did not change.
-  modelPath: "/models/damavand.glb?v=phase3-sentinel-20260812",
+  modelPath: "/models/damavand.glb?v=ultra4k-sentinel-20260812",
   terrain: {
     manifestPath: "/models/damavand.terrain.json",
     imageryManifestPath: "/models/damavand.imagery.json",
