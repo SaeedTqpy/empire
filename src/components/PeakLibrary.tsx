@@ -34,13 +34,16 @@ export const PeakLibrary = memo(function PeakLibrary({
   };
 
   return (
-    <aside className="flex h-full w-full flex-col gap-3 overflow-hidden" aria-label="Peak library">
-      <div className="flex flex-none items-center justify-between px-1 pt-1">
-        <span className="kicker !text-[0.78rem]">Iran Peak Library</span>
-        <BookmarkIcon className="h-[18px] w-[18px] text-slateblue" aria-hidden />
+    <aside className="atlas-card flex h-full w-full flex-col gap-3 overflow-hidden p-3" aria-label="Peak library" data-panel="library">
+      <div className="iranian-panel-heading flex-none px-1 pt-1">
+        <div className="iranian-panel-title-stack">
+          <span className="kicker !text-[0.72rem]" lang="fa" dir="rtl">دفتر قله‌ها</span>
+          <span className="iranian-panel-subtitle">Iran Peak Library</span>
+        </div>
+        <BookmarkIcon className="mt-1 h-[18px] w-[18px] text-slateblue" aria-hidden />
       </div>
 
-      <div ref={listRef} className="atlas-scroll -mx-2 min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2 pb-2" role="listbox" aria-label="Iranian peaks">
+      <div ref={listRef} className="atlas-scroll -mx-1 min-h-0 flex-1 space-y-1.5 overflow-y-auto px-1 pb-2" role="listbox" aria-label="Iranian peaks">
         {peaks.map((peak, i) => {
           const active = peak.id === activeId;
           const fav = favorites.has(peak.id);
@@ -60,7 +63,8 @@ export const PeakLibrary = memo(function PeakLibrary({
               <img className="thumb" src={peak.media.thumbnail} alt={`${peak.name} preview`} loading="lazy" draggable={false} />
               <span className="min-w-0 flex-1 leading-tight">
                 <span className="font-display block text-[0.98rem] font-bold leading-[1.1] text-ink">{peak.name}</span>
-                <span className="mt-0.5 block truncate text-[0.78rem] text-ink-muted">{peak.elevationM.toLocaleString()} m · {peak.range}</span>
+                <span className="iranian-local-name mt-1 block truncate text-[0.76rem]" lang="fa" dir="rtl">{peak.localName}</span>
+                <span className="mt-1 block truncate text-[0.7rem] text-ink-muted">{peak.elevationM.toLocaleString()} m · {peak.range}</span>
               </span>
               <span
                 role="button"
@@ -80,7 +84,10 @@ export const PeakLibrary = memo(function PeakLibrary({
       </div>
 
       <button onClick={onViewAll} className="btn-outline flex-none !justify-between px-4">
-        <span className="font-display !text-[0.95rem] font-semibold">View all peaks</span>
+        <span className="grid text-left leading-tight">
+          <span className="text-[0.82rem] font-bold" lang="fa" dir="rtl">همه قله‌ها</span>
+          <span className="text-[0.62rem] text-ink-muted">View all peaks</span>
+        </span>
         <ArrowRightIcon className="h-4 w-4" />
       </button>
     </aside>
