@@ -1,0 +1,37 @@
+name: Probe Phase 8 Open Damavand Imagery
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - phase8-digital-twin-build
+    paths:
+      - "scripts/digital_twin/probe_open_aerial_map.py"
+      - ".github/workflows/probe-phase8-open-imagery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probe OpenAerialMap
+        run: |
+          python scripts/digital_twin/probe_open_aerial_map.py \
+            --output .cache/digital-twin/open-aerial-map.json
+
+      - name: Upload source report
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase8-open-aerial-map-report
+          path: .cache/digital-twin/open-aerial-map.json
+          if-no-files-found: error
