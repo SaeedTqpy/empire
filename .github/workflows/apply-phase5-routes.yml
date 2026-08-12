@@ -1,0 +1,88 @@
+name: Apply Phase 5 Routes
+
+on:
+  push:
+    branches: [iran-peaks]
+    paths:
+      - scripts/routes/**
+      - .github/workflows/apply-phase5-routes.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  routes:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: iran-peaks
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build South reference route
+        run: python3 scripts/routes/build_reference_route.py --config scripts/routes/damavand-south.json
+
+      - name: Apply terrain-aware route engine
+        run: python3 scripts/routes/apply_phase5_engine.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Validate generated route
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('public/routes/damavand-south.json')
+          data = json.loads(p.read_text())
+          points = data.get('points', [])
+          if len(points) < 20:
+              raise SystemExit(f'route too sparse: {len(points)} points')
+          if data.get('peak_id') != 'damavand':
+              raise SystemExit('wrong peak id')
+          coverage = float(data.get('source', {}).get('osm_coverage_ratio', 0))
+          print(f"route points={len(points)} osm_coverage={coverage:.1%}")
+          PY
+
+      - name: Publish Phase 5 route code and data
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          tmp_dir="$(mktemp -d)"
+          mkdir -p "$tmp_dir/src/three" "$tmp_dir/public/routes"
+          cp src/three/engine.ts "$tmp_dir/src/three/engine.ts"
+          cp public/routes/damavand-south.json "$tmp_dir/public/routes/damavand-south.json"
+
+          git fetch origin iran-peaks
+          git reset --hard origin/iran-peaks
+
+          mkdir -p src/three public/routes
+          cp "$tmp_dir/src/three/engine.ts" src/three/engine.ts
+          cp "$tmp_dir/public/routes/damavand-south.json" public/routes/damavand-south.json
+          rm -rf "$tmp_dir"
+
+          git add src/three/engine.ts public/routes/damavand-south.json
+          if git diff --cached --quiet; then
+            echo "Phase 5 route engine/data already up to date."
+            exit 0
+          fi
+
+          git commit -m "feat(routes): project Damavand routes onto real terrain"
+          git push origin HEAD:iran-peaks
