@@ -29,6 +29,27 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Prime Phase 5 Damavand dataset for markers
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/data/peaks/damavand.ts')
+          text = p.read_text()
+          if 'import { damavandHotspots } from "./damavand-hotspots";' not in text:
+              text = text.replace(
+                  'import type { Peak } from "@/types/peak";',
+                  'import type { Peak } from "@/types/peak";\nimport { damavandHotspots } from "./damavand-hotspots";',
+                  1,
+              )
+          old = '''  // Geo-aware hotspots arrive in Phase 6. Route geometry itself is geo-aware\n  // now and clamps to the production DEM at runtime.\n  hotspots: [],'''
+          new = '''  // Phase 6 markers use WGS84 coordinates and are raycast onto the DEM.\n  hotspots: damavandHotspots,'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('current Damavand hotspot anchor not found')
+              text = text.replace(old, new, 1)
+          p.write_text(text)
+          PY
+
       - name: Apply geo-aware marker migration
         run: python3 scripts/hotspots/apply_phase6_code.py
 
